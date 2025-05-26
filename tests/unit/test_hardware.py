@@ -5,8 +5,7 @@ Unit tests for the hardware abstraction layer (AbstractLED, MockLED, PCA9685LED,
 
 import unittest
 import sys
-import os
-from unittest.mock import MagicMock, patch # Keep patch here, it's good practice
+from unittest.mock import MagicMock  # Keep patch here, it's good practice
 from __init__ import setpath
 setpath()
 
@@ -14,8 +13,8 @@ setpath()
 # This ensures that when running tests directly, Python can find the modules in 'src'
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 print(f"{sys.path}")
-from src.hardware.abstract_led import AbstractLED
-from src.hardware.mock_led import MockLED
+from bongo.hardware.abstract_led import AbstractLED
+from bongo.hardware.mock_led import MockLED
 
 # --- Start of Comprehensive Hardware Mocking ---
 # These mocks replace the actual hardware libraries during testing
@@ -63,14 +62,14 @@ sys.modules['RPi'].GPIO.PWM.return_value.stop.return_value = None
 # Try to import real hardware classes after mocking
 # These will use the mocked modules, so they don't need actual hardware
 try:
-    from src.hardware.pca9685_led import PCA9685LED, get_pca9685_board, _pca_boards
+    from bongo.hardware import PCA9685LED, get_pca9685_board, _pca_boards
     PCA9685LED_AVAILABLE = True
 except (ImportError, RuntimeError) as e:
     PCA9685LED_AVAILABLE = False
     print(f"PCA9685LED not available for testing (dependencies missing/mocking issue): {e}")
 
 try:
-    from src.hardware.pi_pwm_led import PiPWMLED, cleanup_pi_pwm, _pwm_objects
+    from bongo.hardware.rpi_gpio_hal import PiPWMLED, cleanup_pi_pwm, _pwm_objects
     PIPWMLED_AVAILABLE = True
 except (ImportError, RuntimeError) as e:
     PIPWMLED_AVAILABLE = False
@@ -112,7 +111,7 @@ class TestMockLED(unittest.TestCase):
 @unittest.skipUnless(PCA9685LED_AVAILABLE, "PCA9685LED not available for testing (dependencies missing/mocking issue)")
 class TestPCA9685LED(unittest.TestCase):
     def setUp(self):
-        # Clear the internal cache in pca9685_led.py to ensure a fresh mock for each test
+        # Clear the internal cache in pca9685_hal.py to ensure a fresh mock for each test
         # This prevents tests from interfering with each other via the shared cache
         _pca_boards.clear()
 

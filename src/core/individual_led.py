@@ -8,8 +8,8 @@ import time
 import threading
 import queue
 
-from src.hardware.abstract_led import AbstractLED
-from src.core.led_commands import LEDOperation, BRIGHTNESS_MAX, BRIGHTNESS_MIN
+from bongo.hardware.abstract_led import AbstractLED
+from src.core.led_commands import LEDOperation, BRIGHTNESS_MIN
 
 class IndividualLED:
     """

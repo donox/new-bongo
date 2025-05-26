@@ -1,9 +1,8 @@
-# integration_tests/run_integration_tests.py
+# integration/run_integration_tests.py
 
 import unittest
 import os
 import sys
-import time
 from __init__ import setpath
 setpath()
 
@@ -12,7 +11,7 @@ def run_all_integration_tests():
 
     try:
         import RPi.GPIO as GPIO
-        from hardware.pi_pwm_led import PiPWMLED, cleanup_pi_pwm, _pwm_objects
+        from bongo.hardware.rpi_gpio_hal import PiPWMLED, cleanup_pi_pwm, _pwm_objects
 
         GPIO_AVAILABLE = True
     except (ImportError, RuntimeError) as e:
@@ -21,7 +20,7 @@ def run_all_integration_tests():
         print(f"TOPDEBUG: Import error details: {e.args}")  # More verbose error
         print(f"TOPDEBUG: Attempting to import 'src.hardware.pi_pwm_led' failed. sys.path: {sys.path}")
 
-    # Get the directory of the current script (e.g., .../BongoNew/integration_tests/)
+    # Get the directory of the current script (e.g., .../BongoNew/integration/)
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Calculate the path to the 'src' directory (e.g., .../BongoNew/src/)
@@ -38,7 +37,7 @@ def run_all_integration_tests():
     #     print(f"  {p}")
     # print("-" * 30)
 
-    # Discover tests in the 'integration_tests' directory
+    # Discover tests in the 'integration' directory
     loader = unittest.TestLoader()
     suite = loader.discover(current_script_dir, pattern="test_*.py")
 

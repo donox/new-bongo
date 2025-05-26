@@ -7,16 +7,15 @@ import unittest
 import time
 import os
 import sys
-from unittest.mock import MagicMock, patch
-import queue
+from unittest.mock import MagicMock
 
 # Ensure path adjustments are handled by run_tests.py globally.
 
 from src.core.individual_led import IndividualLED
-from src.hardware.abstract_led import AbstractLED
+from bongo.hardware.abstract_led import AbstractLED
 
 # Assumes src/core/led_commands.py exists now
-from src.core.led_commands import LEDOperation, BRIGHTNESS_MAX, BRIGHTNESS_MIN
+from src.core.led_commands import LEDOperation
 
 
 class TestIndividualLED(unittest.TestCase):

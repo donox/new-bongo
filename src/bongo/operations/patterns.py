@@ -1,4 +1,4 @@
-# new-bongo/src/bongo/operations/patterns/base_patterns.py
+# new-bongo/src/bongo/patterns/base_patterns.py
 
 import time
 import random
@@ -6,20 +6,19 @@ from typing import Generator, Tuple, List
 
 from bongo.operations.led_operation import LEDOperation, BRIGHTNESS_MAX, BRIGHTNESS_MIN
 
-
 def create_wave_pattern(led_coords: List[Tuple[int, int]], start_time_base: float = 0) -> Generator[
     Tuple[Tuple[int, int], LEDOperation], None, None]:
     """
     Generates LEDOperations for a sequential "wave" effect across given LEDs.
     The wave progresses based on the order of led_coords provided.
-
+    
     :param led_coords: A list of (row, col) tuples representing the LEDs in the order
                        the wave should propagate.
     :param start_time_base: The base time (time.monotonic()) from which delays are calculated.
     :return: A generator yielding ((row, col), LEDOperation) tuples.
     """
     print("Generating wave pattern commands...")
-
+    
     # Example parameters for the wave effect
     ramp_time = 0.1
     hold_time = 0.3
@@ -40,12 +39,11 @@ def create_wave_pattern(led_coords: List[Tuple[int, int]], start_time_base: floa
         yield (coords, operation)
 
 
-def create_random_flash_pattern(led_coords: List[Tuple[int, int]], num_flashes: int, start_time_base: float = 0) -> \
-Generator[
+def create_random_flash_pattern(led_coords: List[Tuple[int, int]], num_flashes: int, start_time_base: float = 0) -> Generator[
     Tuple[Tuple[int, int], LEDOperation], None, None]:
     """
     Generates LEDOperations for random LEDs to flash with varying characteristics.
-
+    
     :param led_coords: A list of (row, col) tuples representing the available LEDs.
     :param num_flashes: The total number of flash operations to generate.
     :param start_time_base: The base time (time.monotonic()) from which random delays are added.
@@ -69,12 +67,11 @@ Generator[
         yield (random_led_coords, operation)
 
 
-def create_blink_pattern(led_coords: Tuple[int, int], num_blinks: int, interval: float, start_time_base: float = 0) -> \
-Generator[
+def create_blink_pattern(led_coords: Tuple[int, int], num_blinks: int, interval: float, start_time_base: float = 0) -> Generator[
     Tuple[Tuple[int, int], LEDOperation], None, None]:
     """
     Generates LEDOperations for a single LED to blink multiple times.
-
+    
     :param led_coords: The (row, col) tuple of the single LED to blink.
     :param num_blinks: The number of times the LED should blink (on-off cycle).
     :param interval: The duration for each "on" phase and each "off" phase (e.g., 0.5s on, 0.5s off).
@@ -89,10 +86,10 @@ Generator[
             start_time=current_start_time,
             target_brightness=BRIGHTNESS_MAX,
             ramp_duration=0.05,  # Quick ramp up
-            hold_duration=interval - 0.10,  # Hold duration adjusted for ramp/fade
-            fade_duration=0.05  # Quick fade down
+            hold_duration=interval - 0.10, # Hold duration adjusted for ramp/fade
+            fade_duration=0.05   # Quick fade down
         )
         yield (led_coords, on_op)
-
+        
         # Move start time for next blink
-        current_start_time += interval * 2  # One interval for ON, one for OFF
+        current_start_time += interval * 2 # One interval for ON, one for OFF

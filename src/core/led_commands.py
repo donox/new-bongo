@@ -4,10 +4,8 @@ Defines the data structures for LED commands and operations.
 """
 
 import time
+from src.bongo.utils.constants import BRIGHTNESS_MAX, BRIGHTNESS_MIN
 
-# Define the maximum and minimum brightness values
-BRIGHTNESS_MAX = 255
-BRIGHTNESS_MIN = 0
 
 
 class LEDOperation:

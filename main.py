@@ -9,17 +9,16 @@ import argparse
 from typing import Dict
 
 # Import core components
-from src.core.led_controller import LEDController
-from src.core.led_commands import LEDOperation
-from src.patterns.base_patterns import create_wave_pattern, create_random_flash_pattern, create_blink_pattern
+from src.core.xx_led_controller import LEDController
+from bongo.operations.patterns import create_wave_pattern, create_random_flash_pattern, create_blink_pattern
 
 # Import hardware implementations
-from src.hardware.abstract_led import AbstractLED
-from src.hardware.mock_led import MockLED
+from bongo.hardware.abstract_led import AbstractLED
+from bongo.hardware.mock_led import MockLED
 
 # Conditional imports for real hardware:
 try:
-    from src.hardware.pca9685_led import PCA9685LED, get_pca9685_board
+    from bongo.hardware import PCA9685LED, get_pca9685_board
 
     HAS_PCA9685 = True
 except (ImportError, RuntimeError) as e:
@@ -27,7 +26,7 @@ except (ImportError, RuntimeError) as e:
     HAS_PCA9685 = False
 
 try:
-    from src.hardware.pi_pwm_led import PiPWMLED, cleanup_pi_pwm
+    from bongo.hardware.rpi_gpio_hal import PiPWMLED, cleanup_pi_pwm
 
     HAS_PI_PWM = True
 except (ImportError, RuntimeError) as e:

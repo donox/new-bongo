@@ -1,4 +1,4 @@
-# integration_tests/test_pca9685_board.py
+# integration/test_pca9685_board.py
 
 import unittest
 import time
@@ -7,7 +7,7 @@ import sys
 
 # Importantly, DO NOT mock adafruit_pca9685, board, busio here.
 # Ensure sys.path is correctly configured by run_integration_tests.py
-from src.hardware.pca9685_led import PCA9685LED, get_pca9685_board, _pca_boards
+from bongo.hardware import PCA9685LED, _pca_boards
 try:
     import board  # Requires circuitpython-board
     import busio  # Requires circuitpython-busio
@@ -34,7 +34,7 @@ class TestPCA9685LEDIntegration(unittest.TestCase):
 
     def setUp(self):
         print(f"\n--- Setting up PCA9685LED test on channel {self.PCA_CHANNEL} ---")
-        # Clear the internal cache in pca9685_led.py to ensure a fresh board for each test
+        # Clear the internal cache in pca9685_hal.py to ensure a fresh board for each test
         _pca_boards.clear()
         self.led = PCA9685LED("test_integration_pca_led", 0)
         print(f"LED should be OFF initially on PCA9685 channel {self.PCA_CHANNEL}.")

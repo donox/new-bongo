@@ -1,10 +1,9 @@
-# integration_tests/test_rpi_gpio_led.py
+# integration/test_rpi_gpio_led.py
 
 import unittest
 import time
 import os
 import sys
-import glob  # Added for diagnostic purposes
 
 # # --- Start Diagnostic Code ---
 # print("\n--- Diagnostic Check ---")
@@ -59,7 +58,7 @@ import glob  # Added for diagnostic purposes
 # check_init_file(hardware_path_for_diag)
 #
 # # Check for the specific module file
-# pi_pwm_led_file = os.path.join(hardware_path_for_diag, 'pi_pwm_led.py')
+# pi_pwm_led_file = os.path.join(hardware_path_for_diag, 'rpi_gpio_hal.py')
 # print(f"Checking '{pi_pwm_led_file}':")
 # if os.path.exists(pi_pwm_led_file):
 #     print(f"  Exists: YES")
@@ -81,7 +80,7 @@ import glob  # Added for diagnostic purposes
 
 try:
     import RPi.GPIO as GPIO
-    from src.hardware.pi_pwm_led import PiPWMLED, cleanup_pi_pwm, _pwm_objects
+    from bongo.hardware.rpi_gpio_hal import PiPWMLED, cleanup_pi_pwm, _pwm_objects
 
     GPIO_AVAILABLE = True
 except (ImportError, RuntimeError) as e:
@@ -191,8 +190,8 @@ class TestPiPWMLEDIntegration(unittest.TestCase):
 if __name__ == '__main__':
     # Ensure sys.path is correct for imports if running directly
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Assuming run_integration_tests.py is in integration_tests/, and src/ is sibling to integration_tests/
-    # This means project root (lights/) is one level up from integration_tests/
+    # Assuming run_integration_tests.py is in integration/, and src/ is sibling to integration/
+    # This means project root (lights/) is one level up from integration/
     project_root = os.path.abspath(os.path.join(current_script_dir, os.pardir))
     src_directory = os.path.abspath(os.path.join(project_root, 'src'))
 
