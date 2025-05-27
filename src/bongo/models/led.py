@@ -18,6 +18,8 @@ class BasicLED(ILED):
         self._color: Tuple[int, int, int] = (0, 0, 0)  # Default to off (black)
         self._brightness: float = 0.0  # Default to off
         self._unique_id: str = f"R{row}C{col}"
+        self._last_color: Tuple[int, int, int] = (255, 255, 255)
+        self._last_brightness: float = 1.0
 
     @property
     def row(self) -> int:
@@ -65,15 +67,19 @@ class BasicLED(ILED):
         elif self.brightness == 0.0: # If previously off, set to a default brightness
             self.set_brightness(1.0) # Full brightness by default
 
-    def turn_off(self) -> None:
-        self.set_color(0, 0, 0)
-        self.set_brightness(0.0)
+    def off(self) -> None:
+        if self._brightness > 0.0 and self._color != (0, 0, 0):
+            self._last_color = self._color
+            self._last_brightness = self._brightness
+        self._color = (0, 0, 0)
+        self._brightness = 0.0
 
     def toggle(self) -> None:
         if self.is_on:
-            self.turn_off()
+            self.off()
         else:
-            self.turn_on() # Will use last color/brightness or default
+            self.set_color(*self._last_color)
+            self.set_brightness(self._last_brightness)
 
     def get_state(self) -> dict:
         return {
@@ -84,6 +90,16 @@ class BasicLED(ILED):
             "brightness": self._brightness,
             "is_on": self.is_on
         }
+
+    @property
+    def brightness(self) -> float:
+        return self._brightness
+
+    @brightness.setter
+    def brightness(self, value: float) -> None:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError("Brightness value must be between 0.0 and 1.0.")
+        self._brightness = value
 
     def __repr__(self) -> str:
         return f"BasicLED(R{self._row}C{self._col}, Color={self._color}, Brightness={self._brightness:.2f})"

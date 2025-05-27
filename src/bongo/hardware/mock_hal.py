@@ -1,5 +1,5 @@
 """
-mock_led.py
+mock_hal.py
 Provides a mock implementation of the IPixelController interface for testing purposes.
 """
 
@@ -13,6 +13,7 @@ class MockPixelController(IPixelController):
     A mock implementation of the IPixelController interface for testing purposes.
     It simulates an LED matrix in memory and prints its state changes to the console.
     """
+
     def __init__(self, rows: int, cols: int):
         if not isinstance(rows, int) or rows <= 0:
             raise ValueError("Rows must be a positive integer.")
@@ -21,22 +22,18 @@ class MockPixelController(IPixelController):
 
         self._rows = rows
         self._cols = cols
-        # Internal representation of the LED matrix state:
-        # Dictionary with (row, col) as keys, and (r, g, b, brightness) as values
         self._pixel_state: Dict[Tuple[int, int], Tuple[int, int, int, float]] = {}
-        self.initialize()
-        print(f"MockPixelController: Initialized for {self._rows}x{self._cols} matrix.")
 
-    def initialize(self) -> None:
-        """
-        Initializes the mock pixel controller. Clears the state.
-        """
-        self._pixel_state.clear()
-        # Initialize all pixels to off (black, 0 brightness)
-        for r in range(self._rows):
-            for c in range(self._cols):
-                self._pixel_state[(r, c)] = (0, 0, 0, 0.0)
-        print("MockPixelController: State cleared (all pixels off).")
+        self.initialize(rows, cols)
+
+    def initialize(self, num_rows: int, num_cols: int, **kwargs) -> None:
+        self._rows = num_rows
+        self._cols = num_cols
+        self._pixel_state = {
+            (r, c): (0, 0, 0, 0.0)
+            for r in range(self._rows)
+            for c in range(self._cols)
+        }
 
     def set_pixel(self, row: int, col: int, r: int, g: int, b: int, brightness: float) -> None:
         """
@@ -92,10 +89,8 @@ class MockPixelController(IPixelController):
         print("-----------------------------\n")
 
     def clear(self) -> None:
-        """
-        Clears all pixels in the mock matrix (sets them to black/off).
-        """
-        self.initialize() # Re-initialize effectively clears to off
+        self.initialize(self._rows, self._cols)
+
         print("MockPixelController: All pixels cleared (set to off).")
 
     def shutdown(self) -> None:

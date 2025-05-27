@@ -2,6 +2,7 @@
 
 import unittest
 from bongo.models.led import BasicLED # Import the concrete LED implementation
+from bongo.interfaces.led import ILED
 
 class TestBasicLED(unittest.TestCase):
     """
@@ -62,7 +63,7 @@ class TestBasicLED(unittest.TestCase):
         self.assertAlmostEqual(self.led.brightness, 1.0)
         self.assertTrue(self.led.is_on)
 
-        self.led.turn_off() # Reset
+        self.led.off() # Reset
         self.led.set_color(0, 255, 0) # Set a color before turning on
         self.led.turn_on()
         self.assertEqual(self.led.color, (0, 255, 0)) # Should retain color if set
@@ -78,7 +79,7 @@ class TestBasicLED(unittest.TestCase):
         self.led.set_brightness(1.0)
         self.assertTrue(self.led.is_on)
 
-        self.led.turn_off()
+        self.led.off()
         self.assertEqual(self.led.color, (0, 0, 0))
         self.assertEqual(self.led.brightness, 0.0)
         self.assertFalse(self.led.is_on)
@@ -98,7 +99,7 @@ class TestBasicLED(unittest.TestCase):
         # Set a color and brightness, then toggle
         self.led.set_color(0, 0, 255)
         self.led.set_brightness(0.5)
-        self.led.turn_off() # Ensure it's off first
+        self.led.off() # Ensure it's off first
         self.led.toggle() # Turn on with previous color/brightness
         self.assertTrue(self.led.is_on)
         self.assertEqual(self.led.color, (0, 0, 255))

@@ -23,62 +23,51 @@ class PCA9685PixelController(IPixelController):
     # Default I2C address for PCA9685
     DEFAULT_I2C_ADDRESS = 0x40
 
-    def __init__(self, rows: int, cols: int, i2c_address: int = DEFAULT_I2C_ADDRESS, pwm_frequency: int = 1000):
-        if not isinstance(rows, int) or rows <= 0:
-            raise ValueError("Rows must be a positive integer.")
-        if not isinstance(cols, int) or cols <= 0:
-            raise ValueError("Cols must be a positive integer.")
-
+    def __init__(self, rows: int, cols: int, i2c_address: int = 0x40, pwm_frequency: int = 1000):
         self._rows = rows
         self._cols = cols
         self._i2c_address = i2c_address
         self._pwm_frequency = pwm_frequency
-
-        # Validate that the matrix size fits within a single PCA9685's channels (16 channels)
-        if self._rows * self._cols > 16:
-            raise ValueError(
-                f"Matrix size ({self._rows}x{self._cols} = {self._rows * self._cols} LEDs) "
-                "exceeds the 16 channels of a single PCA9685 board. "
-                "This controller currently supports only a single PCA9685."
-            )
-
-        self._pca: Optional[PCA9685] = None
-        self._pixel_state: Dict[Tuple[int, int], Tuple[int, int, int, float]] = {}
-
-        # Pre-calculate pixel-to-channel mapping for efficiency
-        # Assumes a simple linear mapping: (row, col) -> channel_index
-        self._pixel_to_channel_map: Dict[Tuple[int, int], int] = {}
-        for r in range(self._rows):
-            for c in range(self._cols):
-                self._pixel_to_channel_map[(r, c)] = r * self._cols + c
-
-        self.initialize()
+        self._pixel_state = {}
+        self._pixel_to_channel_map = {
+            (r, c): r * cols + c for r in range(rows) for c in range(cols)
+        }
+        self._pca = None
+        self._initialize_board()
+        self.clear()
         print(
             f"PCA9685PixelController: Initialized for {self._rows}x{self._cols} matrix at address 0x{self._i2c_address:X}.")
 
-    def initialize(self) -> None:
-        """
-        Initializes the PCA9685 board. This method handles I2C bus setup
-        and ensures the PCA9685 instance is ready.
-        """
-        if self._pca is None:
-            if self._i2c_address not in _pca_boards:
-                try:
-                    i2c = busio.I2C(board.SCL, board.SDA)
-                    pca = PCA9685(i2c, address=self._i2c_address)
-                    pca.frequency = self._pwm_frequency
-                    _pca_boards[self._i2c_address] = pca
-                    print(
-                        f"PCA9685 board at address 0x{self._i2c_address:X} initialized with frequency {pca.frequency} Hz.")
-                except (ValueError, RuntimeError) as e:
-                    raise RuntimeError(
-                        f"Could not initialize PCA9685 at address 0x{self._i2c_address:X}. "
-                        "Check wiring and I2C connection."
-                    ) from e
-            self._pca = _pca_boards[self._i2c_address]
+    def _initialize_board(self):
+        global _pca_boards
+        if self._i2c_address not in _pca_boards:
+            i2c = busio.I2C(board.SCL, board.SDA)
+            pca = PCA9685(i2c, address=self._i2c_address)
+            pca.frequency = self._pwm_frequency
+            _pca_boards[self._i2c_address] = pca
+        self._pca = _pca_boards[self._i2c_address]
 
-        # Clear all pixels to off state internally and on the board
+    def initialize(self, num_rows: int, num_cols: int, **kwargs) -> None:
+        self._rows = num_rows
+        self._cols = num_cols
+        self._pixel_state = {
+            (r, c): (0, 0, 0, 0.0)
+            for r in range(self._rows)
+            for c in range(self._cols)
+        }
+        self._pixel_to_channel_map = {
+            (r, c): r * self._cols + c for r in range(self._rows) for c in range(self._cols)
+        }
         self.clear()
+
+    def get_pixel_state(self, row: int, col: int) -> Tuple[int, int, int, float]:
+        """
+        Returns the last logical (r, g, b, brightness) values set for the given pixel.
+        This is used for testing/logical inspection only.
+        """
+        if not (0 <= row < self._rows and 0 <= col < self._cols):
+            raise ValueError(f"Pixel ({row}, {col}) is out of bounds for {self._rows}x{self._cols} matrix.")
+        return self._pixel_state.get((row, col), (0, 0, 0, 0.0))
 
     def set_pixel(self, row: int, col: int, r: int, g: int, b: int, brightness: float) -> None:
         """
@@ -134,6 +123,7 @@ class PCA9685PixelController(IPixelController):
                 self._pixel_state[(r, c)] = (0, 0, 0, 0.0)
         print("PCA9685PixelController: All pixels cleared (set to off).")
 
+
     def shutdown(self) -> None:
         """
         Shuts down the PCA9685 controller, turning off all LEDs and releasing resources.
@@ -146,3 +136,7 @@ class PCA9685PixelController(IPixelController):
                 del _pca_boards[self._i2c_address]
             self._pca = None
             print(f"PCA9685PixelController: Shut down (PCA9685 at 0x{self._i2c_address:X} released).")
+
+def clear_pca9685_cache():
+    """Expose test-safe way to clear PCA9685 board cache."""
+    _pca_boards.clear()

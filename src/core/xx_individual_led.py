@@ -1,5 +1,5 @@
 """
-individual_led.py
+xx_individual_led.py
 Defines the IndividualLED class, which manages a single AbstractLED instance,
 its state, and its command queue. Each IndividualLED runs in its own thread.
 """
@@ -8,7 +8,7 @@ import time
 import threading
 import queue
 
-from bongo.hardware.abstract_led import AbstractLED
+from bongo.interfaces.hardware import IPixelController
 from src.core.led_commands import LEDOperation, BRIGHTNESS_MIN
 
 class IndividualLED:

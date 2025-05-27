@@ -1,120 +1,72 @@
-"""
-test_hardware.py
-Unit tests for the hardware abstraction layer (AbstractLED, MockLED, PCA9685LED, PiPWMLED).
-"""
-
-import unittest
-import sys
-from unittest.mock import MagicMock  # Keep patch here, it's good practice
-from __init__ import setpath
-setpath()
-
-# Adjust the path to import from src
-# This ensures that when running tests directly, Python can find the modules in 'src'
-# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-print(f"{sys.path}")
-from bongo.hardware.abstract_led import AbstractLED
-from bongo.hardware.mock_led import MockLED
-
-# --- Start of Comprehensive Hardware Mocking ---
-# These mocks replace the actual hardware libraries during testing
-# so tests can run without physical hardware or installing all dependencies.
-
-# Mock 'board' module (used by adafruit-circuitpython)
-sys.modules['board'] = MagicMock()
-
-# Mock 'busio' module (used by adafruit-circuitpython for I2C)
-sys.modules['busio'] = MagicMock()
-# Ensure busio.I2C() returns a MagicMock instance when called
-sys.modules['busio'].I2C.return_value = MagicMock()
-# Mock the scan method if it's ever called (though not strictly needed by current PCA9685LED code)
-sys.modules['busio'].I2C.return_value.scan.return_value = [0x40] # Simulate finding a PCA9685
-
-# Mock 'adafruit_pca9685' module
-sys.modules['adafruit_pca9685'] = MagicMock()
-# When PCA9685.PCA9685() is called, it should return a MagicMock instance
-sys.modules['adafruit_pca9685'].PCA9685 = MagicMock()
-# Configure the mock PCA9685 instance that PCA9685() will return
-mock_pca_instance_return_value = MagicMock()
-mock_pca_instance_return_value.frequency = 1000 # Mock frequency attribute
-mock_pca_instance_return_value.channels = [MagicMock() for _ in range(16)] # Mock 16 channels
-sys.modules['adafruit_pca9685'].PCA9685.return_value = mock_pca_instance_return_value
+from bongo.interfaces.hardware import IPixelController
+from typing import Tuple, Dict
 
 
-# Mock 'RPi.GPIO' module
-sys.modules['RPi'] = MagicMock(__spec__=MagicMock(name='RPi', origin='mock', is_package=True))
-# The __spec__ attribute with is_package=True tells Python's import system that 'RPi'
-# should be treated as a package, allowing submodules like 'RPi.GPIO' to be imported.
-sys.modules['RPi'].GPIO = MagicMock() # Mock the GPIO object itself
-# Mock constants
-sys.modules['RPi'].GPIO.BCM = 11
-sys.modules['RPi'].GPIO.OUT = 1
-# Mock the PWM class, ensuring it returns a MagicMock instance when called
-sys.modules['RPi'].GPIO.PWM.return_value = MagicMock()
-# Mock methods on the returned PWM object
-sys.modules['RPi'].GPIO.PWM.return_value.start.return_value = None
-sys.modules['RPi'].GPIO.PWM.return_value.ChangeDutyCycle.return_value = None
-sys.modules['RPi'].GPIO.PWM.return_value.stop.return_value = None
+class MockPixelController(IPixelController):
+    """
+    A mock implementation of IPixelController for testing purposes.
+    Simulates an LED matrix and tracks internal pixel states.
+    """
 
-# --- End of Comprehensive Hardware Mocking ---
+    def __init__(self, rows: int, cols: int):
+        if rows <= 0 or cols <= 0:
+            raise ValueError("Matrix dimensions must be positive integers.")
+        self._rows = rows
+        self._cols = cols
+        self._pixel_state: Dict[Tuple[int, int], Tuple[int, int, int, float]] = {}
+        self.initialize(rows, cols)
 
+    def initialize(self, num_rows: int = None, num_cols: int = None, **kwargs) -> None:
+        """Initializes internal state with all pixels off."""
+        if num_rows is not None:
+            self._rows = num_rows
+        if num_cols is not None:
+            self._cols = num_cols
 
-# Try to import real hardware classes after mocking
-# These will use the mocked modules, so they don't need actual hardware
-try:
-    from bongo.hardware import PCA9685LED, get_pca9685_board, _pca_boards
-    PCA9685LED_AVAILABLE = True
-except (ImportError, RuntimeError) as e:
-    PCA9685LED_AVAILABLE = False
-    print(f"PCA9685LED not available for testing (dependencies missing/mocking issue): {e}")
+        self._pixel_state = {
+            (r, c): (0, 0, 0, 0.0)
+            for r in range(self._rows)
+            for c in range(self._cols)
+        }
 
-try:
-    from bongo.hardware.rpi_gpio_hal import PiPWMLED, cleanup_pi_pwm, _pwm_objects
-    PIPWMLED_AVAILABLE = True
-except (ImportError, RuntimeError) as e:
-    PIPWMLED_AVAILABLE = False
-    print(f"PiPWMLED not available for testing (dependencies missing/mocking issue): {e}")
+    def set_pixel(self, row: int, col: int, r: int, g: int, b: int, brightness: float = 1.0) -> None:
+        """Sets the simulated color and brightness of a pixel."""
+        if not (0 <= row < self._rows and 0 <= col < self._cols):
+            raise ValueError(f"Pixel ({row}, {col}) is out of bounds.")
 
+        if not all(0 <= val <= 255 for val in (r, g, b)):
+            raise ValueError("Color values must be between 0 and 255.")
 
-class TestAbstractLED(unittest.TestCase):
-    def test_abstract_methods(self):
-        # AbstractLED cannot be instantiated directly
-        with self.assertRaises(TypeError):
-            AbstractLED()
+        if not 0.0 <= brightness <= 1.0:
+            raise ValueError("Brightness must be between 0.0 and 1.0.")
 
-class TestMockLED(unittest.TestCase):
-    def setUp(self):
-        self.led = MockLED("test_mock")
+        self._pixel_state[(row, col)] = (r, g, b, brightness)
 
-    def test_initial_state(self):
-        self.assertEqual(self.led.get_brightness(), 0)
+    def show(self) -> None:
+        """Simulates displaying the current matrix state."""
+        print("\nMock LED Matrix State:")
+        for r in range(self._rows):
+            row_repr = ""
+            for c in range(self._cols):
+                r_val, g_val, b_val, bright = self._pixel_state.get((r, c), (0, 0, 0, 0.0))
+                if bright > 0 and (r_val, g_val, b_val) != (0, 0, 0):
+                    row_repr += "█"
+                else:
+                    row_repr += "·"
+            print(row_repr)
+        print()
 
-    def test_set_brightness(self):
-        self.led.set_brightness(100)
-        self.assertEqual(self.led.get_brightness(), 100)
-        self.led.set_brightness(255)
-        self.assertEqual(self.led.get_brightness(), 255)
-        self.led.set_brightness(0)
-        self.assertEqual(self.led.get_brightness(), 0)
+    def clear(self) -> None:
+        """Turns off all simulated pixels."""
+        for key in self._pixel_state:
+            self._pixel_state[key] = (0, 0, 0, 0.0)
 
-    def test_set_brightness_clamping(self):
-        self.led.set_brightness(300) # Above max
-        self.assertEqual(self.led.get_brightness(), 255)
-        self.led.set_brightness(-50) # Below min
-        self.assertEqual(self.led.get_brightness(), 0)
+    def shutdown(self) -> None:
+        """Simulates shutting down hardware and clearing state."""
+        self._pixel_state.clear()
 
-    def test_off(self):
-        self.led.set_brightness(150)
-        self.led.off()
-        self.assertEqual(self.led.get_brightness(), 0)
-
-@unittest.skipUnless(PCA9685LED_AVAILABLE, "PCA9685LED not available for testing (dependencies missing/mocking issue)")
-class TestPCA9685LED(unittest.TestCase):
-    def setUp(self):
-        # Clear the internal cache in pca9685_hal.py to ensure a fresh mock for each test
-        # This prevents tests from interfering with each other via the shared cache
-        _pca_boards.clear()
-
-        # Initialize the LED - this will internally call get_pca9685_board,
-        # which will in turn use our comprehensively mocked PCA9685 class.
-        self.led = PCA9685LED(0, "test_pca_led_mock") # You can choose any channel (e.g., 0) and a name
+    def get_pixel_state(self, row: int, col: int) -> Tuple[int, int, int, float]:
+        """Returns the current simulated state of a pixel (for testing)."""
+        if (row, col) not in self._pixel_state:
+            raise ValueError(f"Pixel ({row}, {col}) is not defined.")
+        return self._pixel_state[(row, col)]
