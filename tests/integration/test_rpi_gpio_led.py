@@ -80,13 +80,12 @@ class TestPiPWMLEDIntegration(unittest.TestCase):
         op = LEDOperation(
             start_time=time.monotonic(),
             target_brightness=BRIGHTNESS_MAX,
-            ramp_duration=0.2,
-            hold_duration=0.3,
-            fade_duration=0.2
-        )
+            ramp_duration=1.0,
+            hold_duration=1.0,
+            fade_duration=0.5       )
         self.manager.add_operation(0, 0, op)
         self.manager.start()
-        time.sleep(1.0)
+        time.sleep(2.5)
         self.manager.stop()
         state = self.controller.get_pixel_state(0, 0)
         self.assertEqual(state, (0, 0, 0, 0.0))
