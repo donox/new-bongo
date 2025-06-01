@@ -1,0 +1,9 @@
+{
+  "loop": true,
+  "steps": [
+    {"type": "brightness", "led": 0, "value": 0.2, "duration": 0.3},
+    {"type": "on", "led": 1, "duration": 0.3},
+    {"type": "off", "led": 0, "duration": 0.2},
+    {"type": "off", "led": 1, "duration": 0.2}
+  ]
+}
