@@ -17,3 +17,16 @@ class LEDOperation:
     ramp_duration: float  # Time to ramp up (seconds)
     hold_duration: float  # Time to hold brightness (seconds)
     fade_duration: float  # Time to fade back down (seconds)
+
+    @property
+    def total_duration(self):
+        return self.ramp_duration + self.hold_duration + self.fade_duration
+
+    def get_brightness(self, timestamp: float) -> float:
+        # logic for ramp → hold → fade
+        ...
+
+    def is_expired(self, timestamp: float) -> bool:
+        return timestamp >= self.start_time + self.total_duration
+
+

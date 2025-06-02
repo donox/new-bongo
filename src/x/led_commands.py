@@ -7,7 +7,6 @@ import time
 from src.bongo.utils.constants import BRIGHTNESS_MAX, BRIGHTNESS_MIN
 
 
-
 class LEDOperation:
     """
     Represents a sequence of actions (ramp, hold, fade) for a single LED.
