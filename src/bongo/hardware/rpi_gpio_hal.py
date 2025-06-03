@@ -120,6 +120,9 @@ class RPiGPIOPixelController(IPixelController):
         """
         return self._pixel_state.get((row, col), (0, 0, 0, 0.0))
 
+    def get_brightness(self):
+        return self._pixel_state["brightness"]
+
 def clear_pwm_objects():
     global _pwm_objects
     for pwm in _pwm_objects.values():

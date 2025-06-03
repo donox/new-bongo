@@ -1,40 +1,37 @@
-#!/usr/bin/env python3
-"""
-Run operations tests only (real hardware, GPIO/PCA9685).
-Accepts an optional argument specifying a test to run:
-    python3 -m run_operations_tests                   # runs all operations tests
-    python3 -m run_operations_tests test_file.py      # runs all tests in test_file.py
-    python3 -m run_operations_tests test_file.py::TestClass::test_method  # runs one specific test
-"""
+# REPLACEMENT MODULE: run_operations_tests.py
 
+import os
 import sys
 import pytest
-from pathlib import Path
 
-print("Running operations tests (real hardware)...")
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-# Compute project root (2 levels up from this file)
-current_file = Path(__file__).resolve()
-project_root = current_file.parents[2]
+def is_running_on_pi():
+    """Basic check to see if we’re on a Raspberry Pi."""
+    try:
+        with open('/proc/cpuinfo', 'r') as f:
+            return 'Raspberry Pi' in f.read()
+    except Exception:
+        return False
 
-# Add src/ to sys.path so 'bongo' package can be imported
-src_path = project_root / "src"
-sys.path.insert(0, str(src_path))
+def main():
+    use_real_hardware = os.getenv("USE_REAL_HARDWARE") == "1"
 
-# Add config/ to sys.path so 'bongo' package can be imported
-config_path = project_root / "config"
-sys.path.insert(0, str(config_path))
+    if use_real_hardware:
+        print("🟢 Running tests with REAL hardware (USE_REAL_HARDWARE=1)")
+    else:
+        print("🧪 Running tests with MOCKED hardware (USE_REAL_HARDWARE=0 or unset)")
 
-# Determine what to run
-if len(sys.argv) > 1:
-    # Allow flexible specification like test file or test function
-    test_target = sys.argv[1]
-    if not test_target.startswith("tests/"):
-        test_target = str(project_root / "tests/operations" / test_target)
-    pytest_args = [test_target]
-else:
-    # Default: run all operations tests
-    pytest_args = [str(project_root / "tests/operations")]
+    # Optional safety check: warn if using real hardware on a non-Pi
+    if use_real_hardware and not is_running_on_pi():
+        print("⚠️ WARNING: USE_REAL_HARDWARE is set, but this does not appear to be a Raspberry Pi.")
+        print("           Tests may fail unless running on compatible hardware.")
 
-# Run pytest with the specified arguments
-pytest.main(pytest_args)
+    # Run all tests in this directory (test_operations_manager, etc.)
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    result_code = pytest.main([test_dir])
+
+    sys.exit(result_code)
+
+if __name__ == "__main__":
+    main()

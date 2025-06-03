@@ -1,52 +1,30 @@
-import time
 import pytest
-from bongo.operations.led_operation import LEDOperation, BRIGHTNESS_MAX, BRIGHTNESS_MIN
+from bongo.matrix.matrix import LEDMatrix
+from bongo.hardware.mock_hal import MockPixelController
 
-def test_led_operation_initial_state():
-    start = time.monotonic()
-    op = LEDOperation(
-        start_time=start,
-        target_brightness=1.0,
-        ramp_duration=0.5,
-        hold_duration=1.0,
-        fade_duration=0.5
-    )
+class TestLEDPixelOperation:
+    def setup_method(self):
+        self.rows = 2
+        self.cols = 2
+        self.controller = MockPixelController(self.rows, self.cols)
+        config = [
+            {"row": r, "col": c, "controller": self.controller}
+            for r in range(self.rows) for c in range(self.cols)
+        ]
+        self.matrix = LEDMatrix(config=config)
 
-    assert op.start_time == start
-    assert op.target_brightness == 1.0
-    assert op.ramp_duration == 0.5
-    assert op.hold_duration == 1.0
-    assert op.fade_duration == 0.5
-    assert op.total_duration == 2.0
+    def test_turn_on_single_pixel(self):
+        self.matrix.set_pixel((0, 1), (255, 255, 255))
+        assert self.controller.get_color((0, 1)) == (255, 255, 255)
 
-def test_led_operation_brightness_ramp():
-    start = time.monotonic()
-    op = LEDOperation(start_time=start, target_brightness=1.0, ramp_duration=1.0, hold_duration=1.0, fade_duration=1.0)
+    def test_turn_off_single_pixel(self):
+        self.matrix.set_pixel((1, 0), (123, 45, 67))
+        self.matrix.set_pixel((1, 0), (0, 0, 0))
+        assert self.controller.get_color((1, 0)) == (0, 0, 0)
 
-    assert op.get_brightness(start) == pytest.approx(BRIGHTNESS_MIN)
-    assert op.get_brightness(start + 0.5) == pytest.approx(0.5, abs=0.05)
-    assert op.get_brightness(start + 1.0) == pytest.approx(BRIGHTNESS_MAX)
-
-def test_led_operation_brightness_hold():
-    start = time.monotonic()
-    op = LEDOperation(start_time=start, target_brightness=0.75, ramp_duration=1.0, hold_duration=1.0, fade_duration=1.0)
-
-    assert op.get_brightness(start + 1.5) == pytest.approx(0.75, abs=0.01)
-
-def test_led_operation_brightness_fade():
-    start = time.monotonic()
-    op = LEDOperation(start_time=start, target_brightness=0.6, ramp_duration=1.0, hold_duration=1.0, fade_duration=1.0)
-
-    # Mid fade
-    brightness = op.get_brightness(start + 2.5)
-    assert BRIGHTNESS_MIN < brightness < 0.6
-
-    # End of fade
-    assert op.get_brightness(start + 3.0) == pytest.approx(BRIGHTNESS_MIN)
-
-def test_led_operation_expired():
-    start = time.monotonic()
-    op = LEDOperation(start_time=start, target_brightness=0.9, ramp_duration=1.0, hold_duration=1.0, fade_duration=1.0)
-
-    assert not op.is_expired(start + 2.9)
-    assert op.is_expired(start + 3.1)
+    def test_multiple_pixel_colors(self):
+        colors = [((0, 0), (255, 0, 0)), ((0, 1), (0, 255, 0)), ((1, 0), (0, 0, 255)), ((1, 1), (255, 255, 0))]
+        for pos, color in colors:
+            self.matrix.set_pixel(pos, color)
+        for pos, color in colors:
+            assert self.controller.get_color(pos) == color

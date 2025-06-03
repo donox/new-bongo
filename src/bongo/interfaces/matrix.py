@@ -1,59 +1,55 @@
-# new-bongo/src/bongo/interfaces/matrix.py
+# src/bongo/interfaces/matrix.py
 
-from abc import ABC, abstractmethod
-from typing import Tuple, List
-from bongo.interfaces.led import ILED
+from bongo.controller.hybrid_controller import HybridLEDController
+from config.matrix_config import MATRIX_CONFIG
 
-class ILEDMatrix(ABC):
+
+class LEDMatrix:
     """
-    Interface for an abstract LED matrix, providing methods to interact with
-    individual LEDs within the matrix and control the overall display.
+    Represents a matrix of LEDs, each managed via a HybridLEDController.
+    Automatically constructed from MATRIX_CONFIG.
     """
 
-    @property
-    @abstractmethod
-    def rows(self) -> int:
-        """The number of rows in the LED matrix."""
-        pass
+    def __init__(self, config=None):
+        self.leds = []
+        self.index_map = {}
 
-    @property
-    @abstractmethod
-    def cols(self) -> int:
-        """The number of columns in the LED matrix."""
-        pass
+        config = config or MATRIX_CONFIG
+        for i, led_config in enumerate(config):
+            controller = HybridLEDController(led_config)
+            self.leds.append(controller)
+            self.index_map[(led_config["row"], led_config["col"])] = i
 
-    @abstractmethod
-    def get_led(self, row: int, col: int) -> ILED:
-        """
-        Retrieves the logical LED object at the specified (row, col) coordinates.
-        :param row: The row index (0-based).
-        :param col: The column index (0-based).
-        :return: An instance of ILED representing the LED at that position.
-        :raises IndexError: If the coordinates are out of bounds.
-        """
-        pass
+    def on(self, index: int):
+        self._validate_index(index)
+        self.leds[index].on()
 
-    @abstractmethod
-    def get_all_leds(self) -> List[ILED]:
-        """
-        Returns a flat list of all ILED objects in the matrix, typically ordered
-        by row, then by column.
-        """
-        pass
+    def off(self, index: int):
+        self._validate_index(index)
+        self.leds[index].off()
 
-    @abstractmethod
-    def clear_all(self) -> None:
-        """
-        Turns off all LEDs in the matrix (sets their brightness to 0.0).
-        This affects the logical state of the LEDs.
-        """
-        pass
+    def set_brightness(self, index: int, value: float):
+        self._validate_index(index)
+        self.leds[index].set_brightness(value)
 
-    @abstractmethod
-    def refresh(self) -> None:
-        """
-        Forces the underlying pixel controller to update the physical display
-        based on the current logical states of all LEDs in the matrix.
-        This method is crucial for hardware implementations that buffer changes.
-        """
-        pass
+    def get_index(self, row: int, col: int):
+        return self.index_map.get((row, col), None)
+
+    def on_at(self, row: int, col: int):
+        idx = self.get_index(row, col)
+        if idx is not None:
+            self.on(idx)
+
+    def off_at(self, row: int, col: int):
+        idx = self.get_index(row, col)
+        if idx is not None:
+            self.off(idx)
+
+    def set_brightness_at(self, row: int, col: int, value: float):
+        idx = self.get_index(row, col)
+        if idx is not None:
+            self.set_brightness(idx, value)
+
+    def _validate_index(self, index: int):
+        if not (0 <= index < len(self.leds)):
+            raise IndexError(f"Invalid LED index: {index}")

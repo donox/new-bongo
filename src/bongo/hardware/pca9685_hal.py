@@ -98,6 +98,9 @@ class PCA9685PixelController(IPixelController):
         self._pca.channels[channel_index].duty_cycle = pwm_value
         # print(f"PCA9685: Set ({row},{col}) channel {channel_index} to PWM {pwm_value} (brightness {brightness:.2f})") # Debug
 
+    def get_brightness(self):
+        return self._pixel_state["brightness"]
+
     def show(self) -> None:
         """
         For PCA9685, setting the duty cycle directly updates the output.

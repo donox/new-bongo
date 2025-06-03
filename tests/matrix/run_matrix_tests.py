@@ -1,36 +1,33 @@
-#!/usr/bin/env python3
-"""
-Run matrix tests only (real hardware, GPIO/PCA9685).
-Accepts an optional argument specifying a test to run:
-    python3 -m run_matrix_tests                   # runs all matrix tests
-    python3 -m run_matrix_tests test_file.py      # runs all tests in test_file.py
-    python3 -m run_matrix_tests test_file.py::TestClass::test_method  # runs one specific test
-"""
+# REPLACEMENT MODULE: run_matrix_tests.py
 
+import os
 import sys
 import pytest
-from pathlib import Path
 
-print("Running matrix tests (real hardware)...")
+def is_running_on_pi():
+    """Basic check to see if we’re on a Raspberry Pi."""
+    try:
+        with open('/proc/cpuinfo', 'r') as f:
+            return 'Raspberry Pi' in f.read()
+    except Exception:
+        return False
 
-# Compute project root (2 levels up from this file)
-current_file = Path(__file__).resolve()
-project_root = current_file.parents[2]
+def main():
+    use_real_hardware = os.getenv("USE_REAL_HARDWARE") == "1"
 
-# Add src/ to sys.path so 'bongo' package can be imported
-src_path = project_root / "src"
-sys.path.insert(0, str(src_path))
+    if use_real_hardware:
+        print("🟢 Running matrix tests with REAL hardware (USE_REAL_HARDWARE=1)")
+    else:
+        print("🧪 Running matrix tests with MOCKED hardware (USE_REAL_HARDWARE=0 or unset)")
 
-# Determine what to run
-if len(sys.argv) > 1:
-    # Allow flexible specification like test file or test function
-    test_target = sys.argv[1]
-    if not test_target.startswith("tests/"):
-        test_target = str(project_root / "tests/matrix" / test_target)
-    pytest_args = [test_target]
-else:
-    # Default: run all matrix tests
-    pytest_args = [str(project_root / "tests/matrix")]
+    if use_real_hardware and not is_running_on_pi():
+        print("⚠️ WARNING: USE_REAL_HARDWARE is set, but this does not appear to be a Raspberry Pi.")
+        print("           Tests may fail unless running on compatible hardware.")
 
-# Run pytest with the specified arguments
-pytest.main(pytest_args)
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    result_code = pytest.main([test_dir])
+
+    sys.exit(result_code)
+
+if __name__ == "__main__":
+    main()

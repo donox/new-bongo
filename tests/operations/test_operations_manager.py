@@ -1,42 +1,55 @@
-import time
 import pytest
-from unittest.mock import Mock
-from bongo.operations.operation import LEDOperation
-from bongo.operations.manager import AnimationManager
+import os
 from bongo.matrix.matrix import LEDMatrix
-
-from test_support_mock import get_matrix  # Will switch to real if USE_REAL_HARDWARE=1
+from bongo.hardware.mock_hal import MockPixelController
+from bongo.operations.operations_manager import OperationsManager
 
 @pytest.fixture
 def matrix():
-    return get_matrix()
+    rows = 2
+    cols = 2
+    controller = MockPixelController(rows, cols)
+    config = [
+        {"row": r, "col": c, "controller": controller}
+        for r in range(rows) for c in range(cols)
+    ]
+    return LEDMatrix(config=config)
 
-def test_add_operation_and_tick(matrix):
-    manager = AnimationManager(matrix)
-    op = LEDOperation(
-        start_time=time.monotonic(),
-        target_brightness=1.0,
-        ramp_duration=0.1,
-        hold_duration=0.1,
-        fade_duration=0.1,
-    )
-    manager.add_operation(0, 0, op)
-    time.sleep(0.35)
-    manager.tick()
-    assert matrix.get_brightness(0, 0) == pytest.approx(0.0, abs=0.05)
-    manager.stop()
+@pytest.fixture
+def manager(matrix):
+    return OperationsManager(matrix)
 
-def test_operation_fades_out(matrix):
-    manager = AnimationManager(matrix)
-    op = LEDOperation(
-        start_time=time.monotonic(),
-        target_brightness=0.8,
-        ramp_duration=0.1,
-        hold_duration=0.1,
-        fade_duration=0.1,
-    )
-    manager.add_operation(0, 0, op)
-    time.sleep(0.35)
+def test_add_operation_and_tick(manager):
+    calls = []
+
+    def op(matrix):
+        calls.append("op_called")
+
+    manager.add_operation(op)
     manager.tick()
-    assert matrix.get_brightness(0, 0) < 0.1
-    manager.stop()
+
+    assert calls == ["op_called"]
+
+def test_clear_operations(manager):
+    def op(matrix):
+        pass
+
+    manager.add_operation(op)
+    manager.clear_operations()
+    assert not manager.operations
+
+def test_multiple_operations_called(manager):
+    called = []
+
+    def op1(matrix):
+        called.append("op1")
+
+    def op2(matrix):
+        called.append("op2")
+
+    manager.add_operation(op1)
+    manager.add_operation(op2)
+    manager.tick()
+
+    assert "op1" in called
+    assert "op2" in called

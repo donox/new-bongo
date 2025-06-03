@@ -18,7 +18,7 @@ class PCA9685LEDController(BaseLEDController):
         self.pca = PCA9685LEDController._boards[board_address]
 
     def on(self):
-        self.set_brightness(1.0)
+        self.set_brightness(255.0)
 
     def off(self):
         self.set_brightness(0.0)

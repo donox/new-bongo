@@ -18,4 +18,4 @@ class GPIOLEDController(BaseLEDController):
         self._pwm.ChangeDutyCycle(0)
 
     def set_brightness(self, value: float):
-        self._pwm.ChangeDutyCycle(max(0, min(100, value * 100)))
+        self._pwm.ChangeDutyCycle(max(0, min(100, value/255 * 100)))
