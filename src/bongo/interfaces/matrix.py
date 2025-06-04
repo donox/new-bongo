@@ -1,7 +1,7 @@
 # src/bongo/interfaces/matrix.py
 
 from bongo.controller.hybrid_controller import HybridLEDController
-from config.matrix_config import MATRIX_CONFIG
+from config.production_config import MATRIX_CONFIG
 
 
 class LEDMatrix:

@@ -1,21 +1,19 @@
-# controller/gpio_controller.py
+# src/bongo/controller/gpio_controller.py
 
-import RPi.GPIO as GPIO
-from bongo.interfaces.controller_base import BaseLEDController
-
-class GPIOLEDController(BaseLEDController):
+class GPIOLEDController:
     def __init__(self, pin: int):
+        import RPi.GPIO as GPIO  # Lazy import inside the constructor
+        self.GPIO = GPIO
         self.pin = pin
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.pin, GPIO.OUT)
-        self._pwm = GPIO.PWM(self.pin, 1000)  # 1 kHz PWM frequency
-        self._pwm.start(0)
+        self.GPIO.setmode(GPIO.BOARD)
+        self.GPIO.setup(self.pin, GPIO.OUT)
 
     def on(self):
-        self._pwm.ChangeDutyCycle(100)
+        self.GPIO.output(self.pin, self.GPIO.HIGH)
 
     def off(self):
-        self._pwm.ChangeDutyCycle(0)
+        self.GPIO.output(self.pin, self.GPIO.LOW)
 
-    def set_brightness(self, value: float):
-        self._pwm.ChangeDutyCycle(max(0, min(100, value/255 * 100)))
+    def set_color(self, color):
+        # GPIO LEDs are assumed single-color (on/off); ignore color
+        self.on()

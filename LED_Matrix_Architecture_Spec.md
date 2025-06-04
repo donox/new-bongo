@@ -82,4 +82,28 @@ Tests organized by abstraction layer:
 
 ---
 
+---
+
+## Outstanding Issue (Controller Creation Logic)
+
+### Problem
+There was ambiguity in the responsibility for constructing the specific controller:
+- Previously, configuration dictionaries {sometimes contained pre-initialized controller instances (e.g., MockPixelController)}.
+- {Now, HybridLEDController is solely responsible for instantiating the correct controller using the config.}
+
+### Resolution
+- **Final Architecture Decision**: {The configuration dictionary must not contain actual controller instances. Instead, it must define the `type` and necessary controller-specific parameters (`pin`, `address`, etc.) to allow `HybridLEDController` to build the correct controller internally.}
+  
+- **Why?**
+  - Keeps configurations {fully declarative and JSON-serializable}.
+  - Supports clearer boundary between {configuration and construction logic}.
+  - {Allows dynamic rehydration from JSON without hardcoded controller imports or manual instantiation.}
+
+### Required Changes
+- ✅ {Refactor test fixtures to remove embedded controller instances.}
+- ✅ {Ensure all configuration entries contain a `type` field and controller parameters.}
+- ✅ {Update `HybridLEDController.__init__` to use internal controller factory logic based on config.}
+- ✅ {Adjust all test and production config sources accordingly.}
+
+
 This document will evolve as design and implementation decisions progress.

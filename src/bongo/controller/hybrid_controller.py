@@ -1,44 +1,39 @@
-# UPDATED: controller/hybrid_controller.py
+from bongo.hardware.rpi_gpio_hal import RPiGPIOPixelController
+from bongo.hardware.pca9685_hal import PCA9685PixelController
+from bongo.hardware.mock_hal import MockPixelController
 
-from bongo.hardware_provider import get_gpio_controller, get_pca_controller
-from bongo.interfaces.controller_base import BaseLEDController
-
-class HybridLEDController(BaseLEDController):
+class HybridLEDController:
     def __init__(self, config: dict):
-        controller_type = config['type']
+        self.row = config["row"]
+        self.col = config["col"]
+        self.controller = self._create_controller(config)
 
-        # For simplicity, each HybridLEDController manages one pixel (0,0)
-        self.row = 0
-        self.col = 0
+    def _create_controller(self, config: dict):
+        controller_type = config["type"]
 
-        if controller_type == 'gpio':
-            GPIOController = get_gpio_controller()
-            self.controller = GPIOController(
-                rows=1,
-                cols=1,
-                gpio_pins=config.get('channel', 12),  # 'channel' is the GPIO pin
-            )
-
-        elif controller_type == 'pca9685':
-            PCAController = get_pca_controller()
-            self.controller = PCAController(
-                rows=1,
-                cols=1,
-                i2c_address=config.get('board', 0x40),  # default to 0x40 if not provided
-                pwm_frequency=config.get('frequency', 1000),
-            )
-
+        if controller_type == "gpio":
+            return RPiGPIOPixelController(pin=config["pin"])
+        elif controller_type == "pca9685":
+            return RPiGPIOPixelController(address=config["address"], pin=config["pin"])
+        elif controller_type == "mock":
+            return MockPixelController(pin=config["pin"])
         else:
-            raise ValueError(f"Unsupported controller type: {controller_type}")
+            raise ValueError(f"Unknown controller type: {controller_type}")
+
+    def set_pixel(self, brightness: int):
+        self.controller.set_brightness(brightness)
+
+    def get_pixel(self):
+        return self.controller.get_brightness()
 
     def on(self):
-        self.controller.set_pixel(self.row, self.col, 255, 255, 255, 1.0)
+        self.set_pixel(255)
 
     def off(self):
-        self.controller.set_pixel(self.row, self.col, 0, 0, 0, 0.0)
+        self.set_pixel(0)
 
-    def set_brightness(self, value: float):
-        self.controller.set_pixel(self.row, self.col, 255, 255, 255, value)
+    def clear(self):
+        self.off()
 
-    def get_brightness(self):
-        return self.controller.get_pixel_state(self.row, self.col)[3]
+    def get_position(self):
+        return self.row, self.col

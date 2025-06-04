@@ -1,10 +1,10 @@
 import pytest
 import time
-from bongo.operations.led_operation import LEDOperation
+from bongo.operations.led_operation import LEDPixelOperation
 
 def test_ramp_progression():
     now = time.monotonic()
-    op = LEDOperation(
+    op = LEDPixelOperation(
         start_time=now,
         target_brightness=1.0,
         ramp_duration=1.0,
@@ -32,7 +32,7 @@ def test_fade_progression():
 
 def test_hold_phase():
     now = time.monotonic()
-    op = LEDOperation(
+    op = LEDPixelOperation(
         start_time=now,
         target_brightness=1.0,
         ramp_duration=0.0,

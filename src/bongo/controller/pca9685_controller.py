@@ -1,28 +1,23 @@
-# controller/pca9685_controller.py
+# src/bongo/controller/pca9685_controller.py
 
-from adafruit_pca9685 import PCA9685
-import busio
-from board import SCL, SDA
-from bongo.interfaces.controller_base import BaseLEDController
+class PCA9685LEDController:
+    def __init__(self, address: int, pin: int):
+        from adafruit_pca9685 import PCA9685  # Lazy import
+        from board import SCL, SDA
+        import busio
 
-class PCA9685LEDController(BaseLEDController):
-    _i2c_bus = busio.I2C(SCL, SDA)
-    _boards = {}
-
-    def __init__(self, board_address: int, channel: int):
-        self.channel = channel
-        if board_address not in PCA9685LEDController._boards:
-            pca = PCA9685(PCA9685LEDController._i2c_bus, address=board_address)
-            pca.frequency = 1000
-            PCA9685LEDController._boards[board_address] = pca
-        self.pca = PCA9685LEDController._boards[board_address]
+        self.pin = pin
+        i2c = busio.I2C(SCL, SDA)
+        self.pca = PCA9685(i2c, address=address)
+        self.pca.frequency = 1000  # Typical value for LED dimming
 
     def on(self):
-        self.set_brightness(255.0)
+        self.pca.channels[self.pin].duty_cycle = 0xFFFF
 
     def off(self):
-        self.set_brightness(0.0)
+        self.pca.channels[self.pin].duty_cycle = 0x0000
 
-    def set_brightness(self, value: float):
-        pwm = int(max(0, min(0xFFFF, value * 0xFFFF)))
-        self.pca.channels[self.channel].duty_cycle = pwm
+    def set_color(self, color):
+        # For monochrome LEDs: interpret brightness from RGB average
+        brightness = int(sum(color[:3]) / 3 / 255 * 0xFFFF)
+        self.pca.channels[self.pin].duty_cycle = brightness

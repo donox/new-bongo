@@ -1,6 +1,5 @@
 
 from typing import List
-from bongo.operations.led_operation import LEDOperation
 
 class AnimationManager:
     def __init__(self, matrix, pixel_controller):
@@ -8,8 +7,7 @@ class AnimationManager:
         self.pixel_controller = pixel_controller
         self.operations = []
 
-    def add_operation(self, led, op):
-        op.controller = led.controller
+    def add_operation(self,  op):
         self.operations.append(op)
 
     def tick(self, time_now: float):
@@ -17,4 +15,8 @@ class AnimationManager:
             done = op.update(time_now)
             if done:
                 self.operations.remove(op)
+
+    def clear_operations(self):
+        self.operations.clear()
+
 

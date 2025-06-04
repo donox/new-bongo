@@ -1,55 +1,56 @@
 import pytest
-import os
-from bongo.matrix.matrix import LEDMatrix
-from bongo.hardware.mock_hal import MockPixelController
-from bongo.operations.operations_manager import OperationsManager
+from bongo.operations.animation_manager import AnimationManager
+from conftest import mock_matrix
+
 
 @pytest.fixture
-def matrix():
-    rows = 2
-    cols = 2
-    controller = MockPixelController(rows, cols)
-    config = [
-        {"row": r, "col": c, "controller": controller}
-        for r in range(rows) for c in range(cols)
-    ]
-    return LEDMatrix(config=config)
+def matrix(mock_matrix):
+    return mock_matrix
+
 
 @pytest.fixture
 def manager(matrix):
-    return OperationsManager(matrix)
+    return AnimationManager(matrix, pixel_controller=None)
+
+
+class DummyOperation:
+    def __init__(self, calls):
+        self.calls = calls
+
+    def update(self, time_now):
+        self.calls.append("op_called")
+        return True
+
 
 def test_add_operation_and_tick(manager):
     calls = []
-
-    def op(matrix):
-        calls.append("op_called")
-
+    op = DummyOperation(calls)
     manager.add_operation(op)
-    manager.tick()
+    manager.tick(0.0)
+    assert "op_called" in calls
 
-    assert calls == ["op_called"]
 
 def test_clear_operations(manager):
-    def op(matrix):
-        pass
-
+    calls = []
+    op = DummyOperation(calls)
     manager.add_operation(op)
     manager.clear_operations()
-    assert not manager.operations
+    manager.tick(0.0)
+    assert "op_called" not in calls
+
 
 def test_multiple_operations_called(manager):
-    called = []
+    calls = []
 
-    def op1(matrix):
-        called.append("op1")
+    class Op:
+        def update(self, time_now):
+            calls.append("called")
+            return True
 
-    def op2(matrix):
-        called.append("op2")
+    op1 = Op()
+    op2 = Op()
 
     manager.add_operation(op1)
     manager.add_operation(op2)
-    manager.tick()
-
-    assert "op1" in called
-    assert "op2" in called
+    manager.tick(0.0)
+    assert calls.count("called") == 2

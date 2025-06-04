@@ -1,6 +1,5 @@
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Optional
 from bongo.controller.hybrid_controller import HybridLEDController
-
 
 class LEDMatrix:
     def __init__(
@@ -9,6 +8,7 @@ class LEDMatrix:
         cols: Optional[int] = None,
         controller=None,
         config: Optional[List[Dict]] = None,
+        time_now: float = 0.0,
     ):
         self.leds: List[HybridLEDController] = []
 
@@ -21,7 +21,6 @@ class LEDMatrix:
         elif rows is not None and cols is not None and controller is not None:
             self.rows = rows
             self.cols = cols
-            self.controller = controller
             for row in range(rows):
                 for col in range(cols):
                     led = HybridLEDController({"row": row, "col": col, "controller": controller})
@@ -34,27 +33,32 @@ class LEDMatrix:
             raise IndexError("LED coordinates out of range")
         return self.leds[row * self.cols + col]
 
-    def set_pixel(self, row: int, col: int, r: int, g: int, b: int, brightness: float):
+    def set_pixel(self, row: int, col: int, brightness: float):
         led = self.get_led(row, col)
-        led.set_pixel(r, g, b, brightness)
+        led.set_pixel(brightness)
 
-    def fill(self, r: int, g: int, b: int, brightness: float):
+    def get_pixel(self, row: int, col: int):
+        return self.get_led(row, col).get_pixel()
+
+    def fill(self, brightness: float):
         for led in self.leds:
-            led.set_pixel(r, g, b, brightness)
+            led.set_pixel(brightness)
 
     def clear(self):
-        self.fill(0, 0, 0, 0.0)
+        self.fill(0.0)
 
-    def set_frame(self, frame: List[List[tuple]]):
+    def set_frame(self, frame: List[List[float]]):
         if len(frame) != self.rows or any(len(row) != self.cols for row in frame):
             raise ValueError("Frame dimensions do not match matrix dimensions")
-
         for row in range(self.rows):
             for col in range(self.cols):
-                r, g, b, brightness = frame[row][col]
-                self.set_pixel(row, col, r, g, b, brightness)
+                self.set_pixel(row, col, frame[row][col])
+
+    def update(self, time_now):
+        self.time_now = time_now
 
     def shutdown(self):
         self.clear()
-        if hasattr(self.controller, "shutdown"):
-            self.controller.shutdown()
+        for led in self.leds:
+            if hasattr(led.controller, "shutdown"):
+                led.controller.shutdown()

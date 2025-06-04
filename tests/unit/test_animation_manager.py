@@ -3,20 +3,24 @@
 import unittest
 import time
 from bongo.operations.animation_manager import AnimationManager
-from bongo.operations.led_operation import LEDOperation, BRIGHTNESS_MAX
-from bongo.matrix.basic_matrix import BasicLEDMatrix
+from bongo.operations.led_operation import LEDPixelOperation as LEDOperation
+from bongo.utils.constants import BRIGHTNESS_MAX
+from bongo.matrix.matrix import LEDMatrix
 from bongo.hardware.mock_hal import MockPixelController
 
 
 class TestAnimationManager(unittest.TestCase):
 
     def setUp(self):
-        self.rows = 2
-        self.cols = 2
-        self.controller = MockPixelController(self.rows, self.cols)
-        self.matrix = BasicLEDMatrix()
-        self.matrix.initialize(self.rows, self.cols, self.controller)
-        self.manager = AnimationManager(self.matrix, self.controller)
+        self.config = [
+            {"row": 0, "col": 0, "type": "mock", "pin": 1},
+            {"row": 0, "col": 1, "type": "mock", "pin": 2},
+            {"row": 1, "col": 0, "type": "mock", "pin": 3},
+            {"row": 1, "col": 1, "type": "mock", "pin": 4},
+        ]
+        self.matrix = LEDMatrix(config=self.config)
+        # self.matrix.initialize(self.rows, self.cols, self.controller)
+        self.manager = AnimationManager(self.matrix, pixel_controller=None)
 
     def test_add_operation_and_run(self):
         """Add a single LEDOperation and verify state change."""
@@ -34,7 +38,7 @@ class TestAnimationManager(unittest.TestCase):
         time.sleep(0.6)  # Allow operation to complete
         self.manager.stop()
 
-        r, g, b, brightness = self.controller.get_pixel_state(row, col)
+        r, g, b, brightness = self.controller.get_brightness(row, col)
         self.assertEqual((r, g, b), (0, 0, 0))  # Should be black
         self.assertEqual(brightness, 0.0)       # Should be off
 

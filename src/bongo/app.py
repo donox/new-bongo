@@ -5,12 +5,15 @@ import time
 import signal
 import sys
 
-from bongo.matrix import LEDMatrix
 from patterns.pattern_manager import PatternManager
 from patterns.json_loader import load_pattern
 
+from config.loader import get_matrix_config
+from bongo.matrix.matrix import LEDMatrix
 
-matrix = None
+matrix_config = get_matrix_config("config/production_config.json")
+matrix = LEDMatrix(config=matrix_config)
+
 pattern_manager = None
 
 def parse_args():

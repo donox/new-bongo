@@ -1,0 +1,8 @@
+[
+  {"row": 0, "col": 0, "type": "gpio", "pin": 12},
+  {"row": 0, "col": 1, "type": "gpio", "pin": 13},
+  {"row": 0, "col": 2, "type": "pca9685", "pin": 1, "address": 64},
+  {"row": 0, "col": 3, "type": "pca9685", "pin": 2, "address": 64},
+  {"row": 0, "col": 4, "type": "pca9685", "pin": 3, "address": 64},
+  {"row": 0, "col": 5, "type": "pca9685", "pin": 4, "address": 64}
+]

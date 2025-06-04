@@ -4,7 +4,7 @@ from typing import List, Dict, Tuple, Any
 try:
     import RPi.GPIO as GPIO
     RPi_GPIO_AVAILABLE = True
-except ImportError:
+except RuntimeError:
     RPi_GPIO_AVAILABLE = False
 
 from bongo.interfaces.hardware import IPixelController
