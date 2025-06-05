@@ -14,7 +14,7 @@ class HybridLEDController:
         if controller_type == "gpio":
             return RPiGPIOPixelController(pin=config["pin"])
         elif controller_type == "pca9685":
-            return RPiGPIOPixelController(address=config["address"], pin=config["pin"])
+            return PCA9685PixelController(address=config["address"], pin=config["pin"])
         elif controller_type == "mock":
             return MockPixelController(pin=config["pin"])
         else:

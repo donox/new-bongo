@@ -1,23 +1,46 @@
-import pytest
-from bongo.operations.led_operation import LEDPixelOperation
-from conftest import mock_matrix
+# test_led_operation.py
+import time
+import unittest
+from unittest.mock import Mock
+
+from bongo.operations.led_operation import LEDOperation, BRIGHTNESS_MAX
 
 
-@pytest.fixture
-def matrix(mock_matrix):
-    return mock_matrix
+class TestLEDOperation(unittest.TestCase):
+    def test_get_brightness_ramp_up(self):
+        op = LEDOperation(
+            start_time=0,
+            target_brightness=BRIGHTNESS_MAX,
+            ramp_duration=1.0,
+            hold_duration=0.0,
+            fade_duration=0.0,
+            controller=None
+        )
+        self.assertEqual(op.get_brightness(0.0), 0.0)
+        self.assertEqual(op.get_brightness(0.5), BRIGHTNESS_MAX * 0.5)
+        self.assertEqual(op.get_brightness(1.0), BRIGHTNESS_MAX)
 
+    def test_update_calls_controller(self):
+        mock_controller = Mock()
+        op = LEDOperation(
+            start_time=0.0,
+            target_brightness=255,
+            ramp_duration=0.5,
+            hold_duration=0.0,
+            fade_duration=0.0,
+            controller=mock_controller
+        )
+        op.update(0.25)
+        mock_controller.set_brightness.assert_called_once()
 
-class TestLEDPixelOperation:
-
-    def test_turn_on_single_pixel(self, matrix):
-        op = LEDPixelOperation(row=0, col=0, on=True)
-        op.apply(matrix)
-        assert matrix.get_pixel(0, 0) == 255
-
-    def test_turn_off_single_pixel(self, matrix):
-        matrix.set_pixel(0, 0, 255)
-        op = LEDPixelOperation(row=0, col=0, on=False)
-        op.apply(matrix)
-        assert matrix.get_pixel(0,0) == 0
-
+    def test_expired_operation(self):
+        op = LEDOperation(
+            start_time=0.0,
+            target_brightness=255,
+            ramp_duration=0.1,
+            hold_duration=0.1,
+            fade_duration=0.1,
+            controller=None
+        )
+        self.assertFalse(op.is_expired(0.2))
+        self.assertTrue(op.is_expired(0.4))
