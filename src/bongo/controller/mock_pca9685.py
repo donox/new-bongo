@@ -1,4 +1,5 @@
 # NEW FILE: src/bongo/controller/mock_pca9685.py
+from bongo.controller.pca9685_controller import PCA9685LEDController # Or the relevant path
 class MockPCA9685LED:
     def __init__(self, channel, board):
         self.channel = channel

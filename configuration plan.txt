@@ -1,0 +1,153 @@
+Goal: A Clear Path from Configuration to Control
+The objective is to establish a single, unambiguous pipeline for initializing the LED matrix that works for production, development, and testing. The desired flow is:
+
+A configuration source (like production_config.json) defines the physical hardware layout.
+
+A loader reads this configuration.
+
+The LEDMatrix class acts as a factory, consuming the configuration to build the grid of live HybridLEDController objects.
+
+The main application and tests use this LEDMatrix object as the single source of truth for interacting with the LEDs.
+
+Here are the changes needed across the project to implement this structure.
+
+Step 1: Solidify the Configuration Loader
+The config/loader.py module should be the single entry point for loading any matrix configuration. It should be flexible enough to load from a file (for production) or accept a dictionary directly (for testing).
+
+File to Edit: config/loader.py
+
+Required Changes:
+
+Create a ConfigLoader class that centralizes loading logic.
+
+# In config/loader.py
+import json
+from typing import Dict, List, Any
+
+class ConfigLoader:
+    """Handles loading of the matrix hardware configuration."""
+
+    def __init__(self, config_data: Dict[str, Any] = None):
+        """
+        Initializes the loader, optionally with pre-existing config data.
+        """
+        self._config = config_data
+
+    def load_from_file(self, filepath: str) -> None:
+        """
+        Loads the hardware configuration from a JSON file.
+
+        Args:
+            filepath: The path to the JSON configuration file.
+        """
+        try:
+            with open(filepath, 'r') as f:
+                self._config = json.load(f)
+        except FileNotFoundError:
+            # Handle error appropriately
+            print(f"Error: Configuration file not found at {filepath}")
+            raise
+        except json.JSONDecodeError:
+            # Handle error appropriately
+            print(f"Error: Could not decode JSON from {filepath}")
+            raise
+
+    def get_led_config(self) -> List[Dict[str, Any]]:
+        """
+        Returns the 'leds' part of the configuration.
+        """
+        if not self._config or 'leds' not in self._config:
+            # Return empty list or raise an error if config is invalid
+            return []
+        return self._config['leds']
+
+
+Step 2: Confirm the LEDMatrix as the Factory
+The src/bongo/matrix/matrix.py file should contain the one and only LEDMatrix class. Its role is to be a factory that correctly interprets the configuration data passed to it. The version we have recently worked on is already very close to this. The key is that its __init__ method robustly uses the config list to create its internal dictionary of HybridLEDControllers.
+
+File to Confirm: src/bongo/matrix/matrix.py
+
+No Changes Needed (based on our last version): The current implementation, which accepts config and default_pca9685_class, is correct for this architecture. It correctly acts as the factory.
+
+Step 3: Connect Everything in the Main Application
+This is the most critical step to fix the disconnect. The main application entry point, presumably src/bongo/app.py, must be updated to use the ConfigLoader and the LEDMatrix.
+
+File to Edit: src/bongo/app.py
+
+Required Changes:
+
+The main execution block should explicitly use the new components.
+
+# In src/bongo/app.py
+import time
+from config.loader import ConfigLoader
+from src.bongo.matrix.matrix import LEDMatrix
+from src.bongo.operations.animation_manager import AnimationManager
+# Import the real hardware class for production
+from src.bongo.hardware.pca9685_hal import PCA9685
+
+# --- Constants ---
+PRODUCTION_CONFIG_PATH = "config/production_config.json"
+
+def main():
+    """Main application entry point."""
+    print("🚀 Bongo is starting up...")
+
+    # 1. Load the configuration
+    print(f"Loading production configuration from: {PRODUCTION_CONFIG_PATH}")
+    loader = ConfigLoader()
+    loader.load_from_file(PRODUCTION_CONFIG_PATH)
+    led_config = loader.get_led_config()
+
+    if not led_config:
+        print("Configuration is empty or invalid. Exiting.")
+        return
+
+    # 2. Create the LEDMatrix instance (the factory)
+    # The matrix is now the single, authoritative object for all LED control.
+    print("Initializing LED Matrix...")
+    matrix = LEDMatrix(
+        config=led_config,
+        default_pca9685_class=PCA9685 # Provide the REAL hardware class for production
+    )
+
+    # 3. Initialize the AnimationManager with the real matrix
+    print("Initializing Animation Manager...")
+    animation_manager = AnimationManager(matrix=matrix)
+
+    # 4. Run patterns, animations, etc.
+    #    (Your application's main loop would go here)
+    # --- Example Usage ---
+    # from src.bongo.patterns.base_patterns import create_wave_pattern
+    # pattern = create_wave_pattern(list(matrix.leds.keys())) # Get all coords from the matrix
+    # for coords, op in pattern:
+    #     animation_manager.add_operation(coords[0], coords[1], op)
+
+    print("Entering main loop (Ctrl+C to exit)...")
+    try:
+        while True:
+            animation_manager.tick()
+            time.sleep(0.01) # Main loop delay
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        matrix.shutdown()
+        print("Bongo has shut down gracefully.")
+
+if __name__ == "__main__":
+    main()
+
+How This Solves Development and Testing
+This clean architecture makes both development and testing scenarios straightforward:
+
+For Developing Patterns: A developer can write a simple script that creates an LEDMatrix instance with a hard-coded configuration, completely bypassing the file loader. This allows for rapid iteration on a small part of the matrix.
+
+# Example script: dev_pattern.py
+# ... (imports) ...
+dev_config = [{"row": 0, "col": 0, "controller_address": 0x40, "led_channel": 15}]
+# Use a mock hardware class for development on a non-Pi machine
+from src.bongo.controller.mock_pca9685 import MockPCA9685
+
+dev_matrix = LEDMatrix(config=dev_config, default_pca9685_class=MockPCA9685)
+# ... now test patterns against dev_matrix ...
+
+For Unit Testing: The test setup in tests/conftest.py is now perfectly aligned with this structure. It should create a mock configuration dictionary and pass it to LEDMatrix, exactly as the main app does, but with a mocked hardware class. This confirms your tests are validating the same code path that production will use.

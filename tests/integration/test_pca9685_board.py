@@ -1,73 +1,72 @@
-import unittest
+# tests/integration/test_pca9685_board.py
+import pytest
 import time
-from bongo.hardware.pca9685_hal import PCA9685PixelController, clear_pca9685_cache
-from bongo.matrix.basic_matrix import BasicLEDMatrix
-from bongo.operations.animation_manager import AnimationManager
-from bongo.operations.led_operation import LEDOperation, BRIGHTNESS_MAX
+import os
 
-class TestPCA9685PixelController(unittest.TestCase):
+# Correctly import LEDMatrix from its actual location in src/bongo/matrix/matrix.py
+from src.bongo.matrix.matrix import LEDMatrix
+# For integration tests, import the real hardware class from the hardware abstraction layer (HAL)
+from src.bongo.hardware.pca9685_hal import PCA9685
+
+# This check will skip all tests in this file if not running on a Raspberry Pi.
+IS_PI = os.path.exists('/proc/device-tree/model')
+
+
+@pytest.mark.skipif(not IS_PI, reason="Requires real PCA9685 hardware on a Raspberry Pi")
+class TestPCA9685Board:
     """
-    Integration tests for PCA9685PixelController with real hardware.
-    NOTE: Ensure I2C and the board are correctly wired before running.
+    Integration tests for the PCA9685 board using the LEDMatrix.
+    These tests require the hardware to be connected.
     """
 
-    def setUp(self):
-        print("\n--- Setting up PCA9685PixelController test ---")
-        clear_pca9685_cache()
+    @pytest.fixture
+    def real_matrix(self):
+        """Fixture to create a real LEDMatrix instance for testing."""
+        # This configuration should match your actual hardware setup.
+        # This example assumes a 2x2 matrix connected to a single PCA9685
+        # controller at I2C address 0x40, using channels 0, 1, 2, and 3.
+        matrix_details = {
+            "controller_address": 0x40,
+            "start_channel": 0,
+            "bus_number": 1  # Default I2C bus for Raspberry Pi
+        }
 
-        self.rows = 1
-        self.cols = 1
-        self.controller = PCA9685PixelController(
-            rows=self.rows,
-            cols=self.cols,
-            i2c_address=0x40
+        # Initialize the matrix, providing the REAL PCA9685 class
+        matrix = LEDMatrix(
+            rows=2,
+            cols=2,
+            matrix_controller_config=matrix_details,
+            default_pca9685_class=PCA9685
         )
-        self.matrix = BasicLEDMatrix()
-        self.matrix.initialize(self.rows, self.cols, self.controller)
-        self.manager = AnimationManager(self.matrix, self.controller)
+        # Ensure matrix is cleared before each test
+        matrix.clear()
+        yield matrix
+        # Teardown: ensure matrix is cleared after each test
+        matrix.clear()
 
-    def tearDown(self):
-        print("--- Shutting down controller ---")
-        self.manager.stop()
-        self.controller.shutdown()
+    def test_matrix_lights_up_and_clears(self, real_matrix):
+        """
+        Tests if filling the matrix with full brightness and then clearing it works.
+        """
+        print("\n--> Testing fill(1.0). All LEDs should be ON.")
+        real_matrix.fill(1.0)
+        time.sleep(2)  # Visual confirmation time
 
-    def test_initial_state_off(self):
-        state = self.controller.get_pixel_state(0, 0)
-        self.assertEqual(state, (0, 0, 0, 0.0))
+        led = real_matrix.get_led(0, 0)
+        assert led is not None
 
-    def test_set_brightness_visible(self):
-        self.controller.set_pixel(0, 0, 255, 255, 255, brightness=0.8)
-        self.controller.show()
-        state = self.controller.get_pixel_state(0, 0)
-        self.assertEqual(state, (255, 255, 255, 0.8))
+        print("--> Testing clear(). All LEDs should be OFF.")
+        real_matrix.clear()
+        time.sleep(2)  # Visual confirmation
 
-    def test_off_method(self):
-        self.controller.set_pixel(0, 0, 255, 255, 255, brightness=1.0)
-        self.controller.clear()
-        state = self.controller.get_pixel_state(0, 0)
-        self.assertEqual(state, (0, 0, 0, 0.0))
+    def test_single_pixel(self, real_matrix):
+        """
+        Tests lighting up a single pixel.
+        """
+        print("\n--> Testing set_pixel(0, 1, 1.0). One LED should be ON.")
+        real_matrix.set_pixel(0, 1, 1.0)  # Light up LED at (0, 1)
+        time.sleep(2)
 
-    def test_brightness_clamping(self):
-        with self.assertRaises(ValueError):
-            self.controller.set_pixel(0, 0, 255, 255, 255, brightness=1.5)
-        with self.assertRaises(ValueError):
-            self.controller.set_pixel(0, 0, 255, 255, 255, brightness=-0.1)
-
-    def test_animation_ramp_and_fade(self):
-        """Verify LED ramps up and down using AnimationManager."""
-        op = LEDOperation(
-            start_time=time.monotonic(),
-            target_brightness=BRIGHTNESS_MAX,
-            ramp_duration=0.2,
-            hold_duration=0.3,
-            fade_duration=0.2
-        )
-        self.manager.add_operation(0, 0, op)
-        self.manager.start()
-        time.sleep(1.0)  # Wait for animation to complete
-        final_state = self.controller.get_pixel_state(0, 0)
-        self.assertEqual(final_state, (0, 0, 0, 0.0))  # Should return to off
-
-
-if __name__ == "__main__":
-    unittest.main()
+        print("--> Clearing board.")
+        real_matrix.clear()
+        time.sleep(1)

@@ -1,42 +1,40 @@
+# In config/loader.py
 import json
-from typing import List, Dict, Any
-from pathlib import Path
-from bongo.hardware.pca9685_hal import PCA9685Controller
-from bongo.hardware.rpi_gpio_hal import GPIOController
+from typing import Dict, List, Any
 
-# Cache of controller instances to reuse the same address/controller if specified multiple times
-_controller_cache = {}
+class ConfigLoader:
+    """Handles loading of the matrix hardware configuration."""
 
-def get_controller(controller_type: str, **kwargs):
-    if controller_type == "gpio":
-        pin = kwargs["pin"]
-        key = ("gpio", pin)
-        if key not in _controller_cache:
-            _controller_cache[key] = GPIOController()
-        return _controller_cache[key]
+    def __init__(self, config_data: Dict[str, Any] = None):
+        """
+        Initializes the loader, optionally with pre-existing config data.
+        """
+        self._config = config_data
 
-    elif controller_type == "pca9685":
-        address = kwargs.get("address", 0x40)
-        key = ("pca9685", address)
-        if key not in _controller_cache:
-            _controller_cache[key] = PCA9685Controller(address)
-        return _controller_cache[key]
+    def load_from_file(self, filepath: str) -> None:
+        """
+        Loads the hardware configuration from a JSON file.
 
-    else:
-        raise ValueError(f"Unsupported controller type: {controller_type}")
+        Args:
+            filepath: The path to the JSON configuration file.
+        """
+        try:
+            with open(filepath, 'r') as f:
+                self._config = json.load(f)
+        except FileNotFoundError:
+            # Handle error appropriately
+            print(f"Error: Configuration file not found at {filepath}")
+            raise
+        except json.JSONDecodeError:
+            # Handle error appropriately
+            print(f"Error: Could not decode JSON from {filepath}")
+            raise
 
-def get_matrix_config(path: str | Path) -> List[Dict[str, Any]]:
-    with open(path, "r") as f:
-        raw_config = json.load(f)
-
-    config = []
-    for entry in raw_config:
-        controller_type = entry.get("type")
-        controller = get_controller(controller_type, **entry)
-        config.append({
-            "row": entry["row"],
-            "col": entry["col"],
-            "controller": controller
-        })
-
-    return config
+    def get_led_config(self) -> List[Dict[str, Any]]:
+        """
+        Returns the 'leds' part of the configuration.
+        """
+        if not self._config or 'leds' not in self._config:
+            # Return empty list or raise an error if config is invalid
+            return []
+        return self._config['leds']

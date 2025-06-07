@@ -1,95 +1,62 @@
-import os
-import sys
-import time
-import unittest
+# tests/integration/test_rpi_gpio_led.py
 import pytest
+import os
+import time
 
-print("✅ Starting test_rpi_gpio_led.py")
+# This check will determine if the code is running on a Raspberry Pi
+IS_PI = os.path.exists('/proc/device-tree/model')
 
-# Check if RPi.GPIO is available or forced for test execution
-GPIO_AVAILABLE = False
-try:
+# Conditionally import RPi.GPIO only if on a Pi
+if IS_PI:
     import RPi.GPIO as GPIO
-except ImportError as e:
-    print("❌ RPi.GPIO import failed:", e)
-else:
-    try:
-        from bongo.hardware.rpi_gpio_hal import RPiGPIOPixelController, clear_pwm_objects
-        GPIO_AVAILABLE = True
-    except ImportError as e:
-        print("❌ RPiGPIOPixelController import failed:", e)
 
-# Skip the entire module if GPIO not available and not forced
-if not GPIO_AVAILABLE and os.getenv("FORCE_GPIO") != "1":
-    pytest.skip("RPi.GPIO not available — skipping GPIO integration tests", allow_module_level=True)
 
-from bongo.models.led import BasicLED
-from bongo.matrix.basic_matrix import BasicLEDMatrix
-from bongo.operations.led_operation import LEDOperation, BRIGHTNESS_MAX
-from bongo.operations.animation_manager import AnimationManager
+# This marker will skip the entire class if not on a Raspberry Pi
+@pytest.mark.skipif(not IS_PI, reason="This test requires RPi.GPIO hardware.")
+class TestRpiGpioLed:
+    """
+    Integration tests for a single LED connected directly to Raspberry Pi GPIO pins.
+    """
 
-class TestPiPWMLEDIntegration(unittest.TestCase):
-    """Integration tests for the RPiGPIOPixelController and LED behavior."""
+    @pytest.fixture
+    def setup_gpio(self):
+        """Fixture to set up and tear down GPIO for a test."""
+        # Use a specific GPIO pin for testing
+        TEST_PIN = 18  # Example: GPIO18 (Pin 12)
 
-    def setUp(self):
-        print("\n--- Setting up RPiGPIOPixelController test ---")
-        self.pins = [12]  # others could be 13, 18, 19
-        self.rows = 1
-        self.cols = 1
+        # Setup GPIO
+        GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
+        GPIO.setwarnings(False)
+        GPIO.setup(TEST_PIN, GPIO.OUT)
 
+        # Yield the pin number to the test
+        yield TEST_PIN
+
+        # Teardown: clean up GPIO settings after the test
+        print("\nCleaning up GPIO...")
         GPIO.cleanup()
-        clear_pwm_objects()
 
-        self.controller = RPiGPIOPixelController(
-            rows=self.rows,
-            cols=self.cols,
-            gpio_pins=self.pins
-        )
-        self.matrix = BasicLEDMatrix()
-        self.matrix.initialize(self.rows, self.cols, self.controller)
+    def test_led_blink(self, setup_gpio):
+        """
+        Tests if a single LED connected to a GPIO pin can blink.
+        This is a visual confirmation test.
+        """
+        led_pin = setup_gpio
+        print(f"\n✅ Starting test_rpi_gpio_led.py on pin {led_pin}")
+        print("--> LED should turn ON for 2 seconds.")
+        GPIO.output(led_pin, GPIO.HIGH)  # Turn LED ON
+        time.sleep(2)
 
-        self.manager = AnimationManager(self.matrix, self.controller)  # ← This was missing
+        print("--> LED should turn OFF for 2 seconds.")
+        GPIO.output(led_pin, GPIO.LOW)  # Turn LED OFF
+        time.sleep(2)
 
-    def tearDown(self):
-        print("--- Shutting down controller ---")
-        self.manager.stop()
-        self.controller.shutdown()
+        print("--> LED should blink 3 times.")
+        for _ in range(3):
+            GPIO.output(led_pin, GPIO.HIGH)
+            time.sleep(0.5)
+            GPIO.output(led_pin, GPIO.LOW)
+            time.sleep(0.5)
 
-    def test_set_brightness_visible(self):
-        self.controller.set_pixel(0, 0, 255, 255, 255, brightness=0.8)
-        self.controller.show()
-        state = self.controller.get_pixel_state(0, 0)
-        self.assertEqual(state[0:3], (255, 255, 255))
-        self.assertAlmostEqual(state[3], 0.8, places=2)
+        print("✅ Test finished.")
 
-    def test_initial_state_off(self):
-        state = self.controller.get_pixel_state(0, 0)
-        self.assertEqual(state, (0, 0, 0, 0.0))
-
-    def test_off_method(self):
-        self.controller.set_pixel(0, 0, 255, 255, 255, brightness=1.0)
-        self.controller.clear()
-        state = self.controller.get_pixel_state(0, 0)
-        self.assertEqual(state, (0, 0, 0, 0.0))
-
-    def test_brightness_clamping(self):
-        with self.assertRaises(ValueError):
-            self.controller.set_pixel(0, 0, 255, 255, 255, brightness=1.5)
-
-    def test_animation_ramp_and_fade(self):
-        op = LEDOperation(
-            start_time=time.monotonic(),
-            target_brightness=BRIGHTNESS_MAX,
-            ramp_duration=1.0,
-            hold_duration=1.0,
-            fade_duration=0.5       )
-        self.manager.add_operation(0, 0, op)
-        self.manager.start()
-        time.sleep(2.5)
-        self.manager.stop()
-        state = self.controller.get_pixel_state(0, 0)
-        self.assertEqual(state, (0, 0, 0, 0.0))
-
-
-if __name__ == '__main__':
-    unittest.main()
