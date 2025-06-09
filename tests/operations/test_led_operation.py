@@ -86,6 +86,7 @@ def test_zero_duration_phases():
         start_time=now, target_brightness=0.9, initial_brightness=0.2,
         ramp_duration=0.1, hold_duration=0.1, fade_duration=0.0
     )
+    # With zero fade, it should maintain target brightness after the hold
     assert abs(op.get_brightness(now + 0.2) - 0.9) < 1e-6
 
 
@@ -124,6 +125,8 @@ class TestHybridLEDControllerBW(unittest.TestCase):
         """Set up for each test."""
         # Create a mock of the pre-initialized PCA9685 hardware object
         self.mock_pca_controller = MagicMock(name="MockPCA9685Instance")
+        # Ensure the mock has the 'set_pwm' method our tests expect
+        self.mock_pca_controller.set_pwm = MagicMock()
         self.led_channel = 5
 
         # Initialize HybridLEDController with the NEW signature:
@@ -145,8 +148,9 @@ class TestHybridLEDControllerBW(unittest.TestCase):
 
         # Verify that set_pwm was called on the mock hardware controller
         # with the correct channel and PWM values for "full on".
+        # The new HybridLEDController calculates PWM on a 0-4095 scale for mocks.
         self.mock_pca_controller.set_pwm.assert_called_once_with(
-            self.led_channel, 0, HybridLEDController.PWM_MAX_VALUE
+            self.led_channel, 0, 4095
         )
         self.assertAlmostEqual(self.led_controller.current_brightness, 1.0)
 
@@ -154,14 +158,15 @@ class TestHybridLEDControllerBW(unittest.TestCase):
         """Test the turn_on convenience method."""
         self.led_controller.turn_on()
         self.mock_pca_controller.set_pwm.assert_called_once_with(
-            self.led_channel, 0, HybridLEDController.PWM_MAX_VALUE
+            self.led_channel, 0, 4095
         )
         self.assertAlmostEqual(self.led_controller.current_brightness, 1.0)
 
-    def test_calculate_pwm_values(self):
-        """Test the internal PWM calculation logic."""
-        # Note: _calculate_pwm_values is an internal method, but we can test it
-        # for completeness.
-        self.assertEqual(self.led_controller._calculate_pwm_values(0), (0, 0))
-        self.assertEqual(self.led_controller._calculate_pwm_values(255), (0, 4095))
-        self.assertEqual(self.led_controller._calculate_pwm_values(128), (0, 2055))
+    def test_duty_cycle_calculation(self):
+        """Test the internal duty cycle calculation for the real hardware API."""
+        # This tests the logic used for the Adafruit library.
+        # Note: _calculate_duty_cycle is an internal method.
+        self.assertEqual(self.led_controller._calculate_duty_cycle(0.0), 0)
+        self.assertEqual(self.led_controller._calculate_duty_cycle(1.0), 65535)
+        self.assertEqual(self.led_controller._calculate_duty_cycle(0.5), 32767)
+
