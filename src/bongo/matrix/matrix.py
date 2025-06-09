@@ -6,47 +6,40 @@ from ..controller.hybrid_controller import HybridLEDController
 
 
 class LEDMatrix:
-    """
-    Represents and controls a 2D matrix of LEDs.
-    """
-
-    def __init__(
-            self,
-            rows: Optional[int] = None,
-            cols: Optional[int] = None,
-            matrix_controller_config: Optional[Dict] = None,
-            config: Optional[List[Dict]] = None,
-            default_pca9685_class=None
-    ):
+    def __init__(self, config: List[Dict], hardware_manager):
         """
-        Initializes the LEDMatrix.
+        Initializes the LEDMatrix from a configuration.
 
         Args:
-            rows: Number of rows in the matrix (if not using 'config').
-            cols: Number of columns in the matrix (if not using 'config').
-            matrix_controller_config: Dict with common controller details for rows/cols setup,
-                                      e.g., {"controller_address": 0x40, "start_channel": 0}.
-            config: A list of dictionaries, where each defines an LED, including its
-                    row, col, controller_address, and led_channel.
-            default_pca9685_class: The class to use for instantiating PCA9685 controllers
-                                   (e.g., a mock for testing, or the actual driver class).
+            config: A list of dictionaries, where each defines an LED.
+            hardware_manager: An initialized HardwareManager instance.
         """
-        # Use a dictionary for direct (row, col) access instead of a list
         self.leds: Dict[Tuple[int, int], HybridLEDController] = {}
-        self.rows: int = 0
-        self.cols: int = 0
+        self.rows = 0
+        self.cols = 0
+        self.hardware_manager = hardware_manager
 
-        if default_pca9685_class is None:
-            raise ValueError("LEDMatrix constructor requires 'default_pca9685_class' to be provided.")
+        if not config:
+            return
 
-        if config:
-            self._init_from_config(config, default_pca9685_class)
-        elif rows is not None and cols is not None:
-            self._init_from_rows_cols(rows, cols, matrix_controller_config, default_pca9685_class)
-        else:
-            # Allows creation of an empty 0x0 matrix if no config is provided
-            pass
+        max_row, max_col = -1, -1
+        for entry in config:
+            r, c = entry.get("row"), entry.get("col")
+            addr = entry.get("controller_address")
+            chan = entry.get("led_channel")
+            # ... (add validation for missing keys) ...
 
+            # Get the correct pre-initialized controller from the manager
+            pca_controller = self.hardware_manager.get_controller(addr)
+
+            # Create the logical LED controller, passing it the hardware controller
+            led = HybridLEDController(led_channel=chan, pca_controller=pca_controller)
+
+            self.leds[(r, c)] = led
+            max_row, max_col = max(max_row, r), max(max_col, c)
+
+        self.rows = max_row + 1
+        self.cols = max_col + 1
     def _init_from_config(self, config: List[Dict], default_pca9685_class):
         if not isinstance(config, list):
             raise TypeError("'config' must be a list of dictionaries.")

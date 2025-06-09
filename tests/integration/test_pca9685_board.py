@@ -7,6 +7,7 @@ import os
 from src.bongo.matrix.matrix import LEDMatrix
 # For integration tests, import the real hardware class from the hardware abstraction layer (HAL)
 from src.bongo.hardware.pca9685_hal import PCA9685
+from src.bongo.hardware_manager import HardwareManager
 
 # This check will skip all tests in this file if not running on a Raspberry Pi.
 IS_PI = os.path.exists('/proc/device-tree/model')
@@ -14,34 +15,29 @@ IS_PI = os.path.exists('/proc/device-tree/model')
 
 @pytest.mark.skipif(not IS_PI, reason="Requires real PCA9685 hardware on a Raspberry Pi")
 class TestPCA9685Board:
-    """
-    Integration tests for the PCA9685 board using the LEDMatrix.
-    These tests require the hardware to be connected.
-    """
-
     @pytest.fixture
     def real_matrix(self):
         """Fixture to create a real LEDMatrix instance for testing."""
-        # This configuration should match your actual hardware setup.
-        # This example assumes a 2x2 matrix connected to a single PCA9685
-        # controller at I2C address 0x40, using channels 0, 1, 2, and 3.
-        matrix_details = {
-            "controller_address": 0x40,
-            "start_channel": 0,
-            "bus_number": 1  # Default I2C bus for Raspberry Pi
-        }
+        # Define the addresses of all PCA9685 boards to be tested.
+        # This matches your future plan of having 0x40, 0x41, etc.
+        controller_addresses = [0x40]  # Add more as you connect them
 
-        # Initialize the matrix, providing the REAL PCA9685 class
-        matrix = LEDMatrix(
-            rows=2,
-            cols=2,
-            matrix_controller_config=matrix_details,
-            default_pca9685_class=PCA9685
-        )
-        # Ensure matrix is cleared before each test
+        # 1. Initialize the hardware first
+        hw_manager = HardwareManager(addresses=controller_addresses)
+
+        # 2. Define the LED layout configuration
+        led_config = [
+            {"row": 0, "col": 0, "controller_address": 0x40, "led_channel": 0},
+            {"row": 0, "col": 1, "controller_address": 0x40, "led_channel": 1},
+            {"row": 1, "col": 0, "controller_address": 0x40, "led_channel": 2},
+            {"row": 1, "col": 1, "controller_address": 0x40, "led_channel": 3},
+        ]
+
+        # 3. Create the matrix, passing the initialized hardware manager
+        matrix = LEDMatrix(config=led_config, hardware_manager=hw_manager)
+
         matrix.clear()
         yield matrix
-        # Teardown: ensure matrix is cleared after each test
         matrix.clear()
 
     def test_matrix_lights_up_and_clears(self, real_matrix):

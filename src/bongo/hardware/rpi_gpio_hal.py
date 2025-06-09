@@ -4,8 +4,10 @@ from typing import List, Dict, Tuple, Any
 try:
     import RPi.GPIO as GPIO
     RPi_GPIO_AVAILABLE = True
+    print("Raspberry Pi GPIO available")
 except RuntimeError:
     RPi_GPIO_AVAILABLE = False
+    print("Raspberry Pi GPIO not available")
 
 from bongo.interfaces.hardware import IPixelController
 
