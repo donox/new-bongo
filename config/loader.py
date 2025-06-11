@@ -1,4 +1,4 @@
-# In config/loader.py
+# config/loader.py
 import json
 from typing import Dict, List, Any
 
@@ -9,7 +9,7 @@ class ConfigLoader:
         """
         Initializes the loader, optionally with pre-existing config data.
         """
-        self._config = config_data
+        self._config = config_data if config_data else {}
 
     def load_from_file(self, filepath: str) -> None:
         """
@@ -34,7 +34,12 @@ class ConfigLoader:
         """
         Returns the 'leds' part of the configuration.
         """
-        if not self._config or 'leds' not in self._config:
-            # Return empty list or raise an error if config is invalid
-            return []
-        return self._config['leds']
+        return self._config.get('leds', [])
+
+    def get_logging_config(self) -> Dict[str, Any]:
+        """
+        Returns the 'logging' section of the configuration.
+        Returns an empty dictionary if it's not present.
+        """
+        return self._config.get('logging', {})
+

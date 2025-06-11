@@ -1,8 +1,29 @@
-[
-  {"row": 0, "col": 0, "type": "gpio", "pin": 12},
-  {"row": 0, "col": 1, "type": "gpio", "pin": 13},
-  {"row": 0, "col": 2, "type": "pca9685", "pin": 1, "address": 64},
-  {"row": 0, "col": 3, "type": "pca9685", "pin": 2, "address": 64},
-  {"row": 0, "col": 4, "type": "pca9685", "pin": 3, "address": 64},
-  {"row": 0, "col": 5, "type": "pca9685", "pin": 4, "address": 64}
-]
+{
+  "logging": {
+    "level": "INFO",
+    "filepath": "bongo.log"
+  },
+  "leds": [
+    {
+      "row": 0,
+      "col": 0,
+      "type": "gpio",
+      "pin": 12
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "type": "gpio",
+      "pin": 13
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "type": "pca9685",
+      "pin": 1,
+      "address": 64
+    }
+  ]
+}
+
+Note: For a path like /var/log/bongo/, you may need to create the directory and set permissions first (sudo mkdir /var/log/bongo && sudo chown bongo:bongo /var/log/bongo). A simpler default for testing might be "filepath": "bongo.log", which will save it in the project root.

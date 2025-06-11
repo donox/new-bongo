@@ -94,6 +94,7 @@ class RPiGPIOPixelController(IPixelController):
             raise RuntimeError(f"PWM object for GPIO pin {gpio_pin} not initialized.")
 
         duty_cycle = brightness * 100
+        print(f"Set duty cycle for pin {gpio_pin} to {duty_cycle}%.")
         _pwm_objects[gpio_pin].ChangeDutyCycle(duty_cycle)
 
     def clear(self) -> None:

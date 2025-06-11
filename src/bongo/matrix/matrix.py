@@ -1,12 +1,29 @@
 # src/bongo/matrix/matrix.py
-from typing import List, Dict, Optional, Tuple
+import logging
+from typing import List, Dict, Optional, Tuple, Union
 
-# Assuming HybridLEDController is in src.bongo.controller.hybrid_controller
+# Import both controller types
 from ..controller.hybrid_controller import HybridLEDController
+from ..controller.gpio_controller import GPIOLEDController
+
+log = logging.getLogger("bongo.matrix")
+
+# A type hint for either controller type
+AnyLEDController = Union[HybridLEDController, GPIOLEDController]
 
 
 class LEDMatrix:
-    def __init__(self, config: List[Dict], hardware_manager):
+    """
+    Represents and controls a 2D matrix of LEDs of mixed types.
+    This class acts as a factory, creating the appropriate controller
+    for each LED defined in the configuration.
+    """
+
+    def __init__(
+            self,
+            config: List[Dict],
+            hardware_manager
+    ):
         """
         Initializes the LEDMatrix from a configuration.
 
@@ -14,9 +31,9 @@ class LEDMatrix:
             config: A list of dictionaries, where each defines an LED.
             hardware_manager: An initialized HardwareManager instance.
         """
-        self.leds: Dict[Tuple[int, int], HybridLEDController] = {}
-        self.rows = 0
-        self.cols = 0
+        self.leds: Dict[Tuple[int, int], AnyLEDController] = {}
+        self.rows: int = 0
+        self.cols: int = 0
         self.hardware_manager = hardware_manager
 
         if not config:
@@ -25,114 +42,68 @@ class LEDMatrix:
         max_row, max_col = -1, -1
         for entry in config:
             r, c = entry.get("row"), entry.get("col")
-            addr = entry.get("controller_address")
-            chan = entry.get("led_channel")
-            # ... (add validation for missing keys) ...
+            led_type = entry.get("type")
 
-            # Get the correct pre-initialized controller from the manager
-            pca_controller = self.hardware_manager.get_controller(addr)
+            if r is None or c is None or led_type is None:
+                raise ValueError(f"Config entry is missing 'row', 'col', or 'type': {entry}")
 
-            # Create the logical LED controller, passing it the hardware controller
-            led = HybridLEDController(led_channel=chan, pca_controller=pca_controller)
+            # --- Controller Factory Logic ---
+            if led_type == "pca9685":
+                addr = entry.get("controller_address")
+                chan = entry.get("led_channel")
+                if addr is None or chan is None:
+                    raise ValueError(f"PCA9685 entry is missing 'controller_address' or 'led_channel': {entry}")
 
-            self.leds[(r, c)] = led
+                log.debug(f"Creating PCA9685 LED at ({r},{c}) on controller {hex(addr)}, channel {chan}")
+                pca_controller = self.hardware_manager.get_controller(addr)
+                led_controller = HybridLEDController(led_channel=chan, pca_controller=pca_controller)
+
+            elif led_type == "gpio":
+                pin = entry.get("pin")
+                if pin is None:
+                    raise ValueError(f"GPIO entry is missing 'pin': {entry}")
+
+                log.debug(f"Creating GPIO LED at ({r},{c}) on pin {pin}")
+                led_controller = GPIOLEDController(pin=pin)
+
+            else:
+                log.warning(f"Skipping unknown LED type '{led_type}' in config for ({r},{c})")
+                continue  # Skip to the next item in the config
+
+            self.leds[(r, c)] = led_controller
             max_row, max_col = max(max_row, r), max(max_col, c)
 
         self.rows = max_row + 1
         self.cols = max_col + 1
-    def _init_from_config(self, config: List[Dict], default_pca9685_class):
-        if not isinstance(config, list):
-            raise TypeError("'config' must be a list of dictionaries.")
-        if not config:
-            return  # Handles empty config list, resulting in a 0x0 matrix
-
-        max_row, max_col = -1, -1
-        for entry in config:
-            r, c = entry.get("row"), entry.get("col")
-            if r is None or c is None:
-                raise ValueError("Config items must contain 'row' and 'col' keys.")
-            max_row, max_col = max(max_row, r), max(max_col, c)
-
-            controller_address = entry.get("controller_address")
-            led_channel = entry.get("led_channel")
-            if controller_address is None or led_channel is None:
-                raise ValueError("Config entry must contain 'controller_address' and 'led_channel'.")
-
-            pca_class_to_use = entry.get("pca9685_class", default_pca9685_class)
-            led = HybridLEDController(
-                controller_address=controller_address,
-                led_channel=led_channel,
-                bus_number=entry.get("bus_number", 1),
-                pwm_frequency=entry.get("pwm_frequency", 200),
-                pca9685_class=pca_class_to_use
-            )
-            if (r, c) in self.leds:
-                raise ValueError(f"Duplicate LED definition in config for row {r}, col {c}")
-            self.leds[(r, c)] = led
-
-        self.rows = max_row + 1
-        self.cols = max_col + 1
-
-    def _init_from_rows_cols(self, rows: int, cols: int, matrix_controller_config: Optional[Dict],
-                             default_pca9685_class):
-        if not (isinstance(rows, int) and rows > 0 and isinstance(cols, int) and cols > 0):
-            raise ValueError("Rows and columns must be positive integers.")
-        self.rows, self.cols = rows, cols
-
-        if not matrix_controller_config or "controller_address" not in matrix_controller_config:
-            raise ValueError("For rows/cols setup, 'matrix_controller_config' with 'controller_address' is required.")
-
-        controller_address = matrix_controller_config["controller_address"]
-        current_channel = matrix_controller_config.get("start_channel", 0)
-
-        for r in range(rows):
-            for c in range(cols):
-                led = HybridLEDController(
-                    controller_address=controller_address,
-                    led_channel=current_channel,
-                    bus_number=matrix_controller_config.get("bus_number", 1),
-                    pwm_frequency=matrix_controller_config.get("pwm_frequency", 200),
-                    pca9685_class=default_pca9685_class
-                )
-                self.leds[(r, c)] = led
-                current_channel += 1
 
     def _normalize_brightness(self, value: float) -> float:
         """Helper to normalize brightness from 0-255 scale to 0.0-1.0 scale if needed."""
         if value > 1.0:
-            return value / 255.0
+            norm_val = value / 255.0
+            log.debug(f"Normalized brightness {value} -> {norm_val:.3f}")
+            return norm_val
+        log.debug(f"Brightness {value} is already normalized.")
         return value
 
-    def get_led(self, row: int, col: int) -> Optional[HybridLEDController]:
-        """Retrieves an LED controller by its row and column using dictionary lookup."""
+    def get_led(self, row: int, col: int) -> Optional[AnyLEDController]:
+        """Retrieves an LED controller by its row and column."""
+        log.debug(f"Getting LED for coordinate ({row}, {col})")
         return self.leds.get((row, col))
 
     def set_pixel(self, row: int, col: int, brightness: float):
-        """
-        Sets the brightness of a single pixel in the matrix.
-
-        Args:
-            row: The row of the pixel.
-            col: The column of the pixel.
-            brightness: The brightness, can be an int (0-255) or float (0.0-1.0).
-        """
+        """Sets the brightness of a single pixel in the matrix."""
         led = self.get_led(row, col)
         if led:
             normalized_brightness = self._normalize_brightness(brightness)
+            log.debug(f"Passing normalized brightness {normalized_brightness:.3f} to controller at ({row},{col})")
             led.set_brightness(normalized_brightness)
         else:
-            # Optional: Log a warning for out-of-bounds access
-            # logger.warning(f"Attempted to set pixel at out-of-bounds location ({row}, {col})")
-            pass
+            log.warning(f"Attempted to set pixel at out-of-bounds location ({row}, {col})")
 
     def fill(self, brightness: float):
-        """
-        Sets all LEDs in the matrix to the same brightness.
-
-        Args:
-            brightness: The brightness, can be an int (0-255) or float (0.0-1.0).
-        """
+        """Sets all LEDs in the matrix to the same brightness."""
         normalized_brightness = self._normalize_brightness(brightness)
+        log.debug(f"Filling all {len(self.leds)} LEDs with normalized brightness {normalized_brightness:.3f}")
         for led in self.leds.values():
             led.set_brightness(normalized_brightness)
 
@@ -140,36 +111,18 @@ class LEDMatrix:
         """Turns all LEDs in the matrix off."""
         self.fill(0.0)
 
-    def set_frame(self, frame: List[List[float]]):
-        """
-        Updates the entire matrix based on a 2D list (frame) of brightness values.
-
-        Args:
-            frame: A 2D list of brightness values (int 0-255 or float 0.0-1.0).
-
-        Raises:
-            ValueError: If the frame dimensions do not match the matrix dimensions.
-        """
-        if not frame or len(frame) != self.rows or len(frame[0]) != self.cols:
-            raise ValueError(
-                f"Frame dimensions ({len(frame)}x{len(frame[0]) if frame else 0}) "
-                f"do not match matrix dimensions ({self.rows}x{self.cols})."
-            )
-
-        for r, row_data in enumerate(frame):
-            for c, brightness in enumerate(row_data):
-                self.set_pixel(r, c, brightness)
-
     def shutdown(self):
-        """Turns all LEDs off and calls cleanup on each controller."""
+        """Turns all LEDs off and calls cleanup on controllers and the hardware manager."""
+        log.info("Shutting down matrix...")
         self.clear()
+        # Cleanup individual logical controllers
         for led in self.leds.values():
             led.cleanup()
+        # Perform global cleanup (e.g., GPIO.cleanup())
+        self.hardware_manager.cleanup()
 
     def __iter__(self):
-        """Allows iteration over the LED controller objects in the matrix."""
         return iter(self.leds.values())
 
     def __len__(self):
-        """Returns the total number of LEDs in the matrix."""
         return len(self.leds)

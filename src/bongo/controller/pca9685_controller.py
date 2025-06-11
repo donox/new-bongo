@@ -21,3 +21,6 @@ class PCA9685LEDController:
         # For monochrome LEDs: interpret brightness from RGB average
         brightness = int(sum(color[:3]) / 3 / 255 * 0xFFFF)
         self.pca.channels[self.pin].duty_cycle = brightness
+
+    def print_me(self):
+        print(f" PCA9685: pin {self.pin}")
