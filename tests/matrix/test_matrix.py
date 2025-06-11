@@ -8,7 +8,7 @@ from src.bongo.matrix.matrix import LEDMatrix
 
 
 # This test file assumes a conftest.py provides the 'mock_matrix' fixture
-# The fixture should correctly instantiate LEDMatrix with a mock pca9685_class.
+# which in turn uses the 'mock_hardware_manager' fixture.
 
 class TestLEDMatrix:
     """Unit tests for the LEDMatrix class."""
@@ -23,7 +23,8 @@ class TestLEDMatrix:
         """Test the get_led() method."""
         led = mock_matrix.get_led(0, 1)
         assert led is not None
-        assert led.led_channel == 1  # Based on the config in conftest.py
+        # Based on the config in conftest.py
+        assert led.led_channel == 1
 
         assert mock_matrix.get_led(5, 5) is None  # Out of bounds
 
@@ -78,7 +79,6 @@ class TestLEDMatrix:
         # 1. First, determine the expected call counts for each mock controller.
         # This will create a dictionary like: {<MockPCA_0x40>: 2, <MockPCA_0x41>: 2}
         expected_counts = Counter(led.controller for led in mock_matrix.leds.values())
-        unique_controllers = list(expected_counts.keys())
 
         # 2. Perform the actions
         mock_matrix.fill(255)
@@ -89,6 +89,7 @@ class TestLEDMatrix:
             assert led.get_pixel() == 0
 
         # 4. Loop through each UNIQUE mock controller and assert its call count.
-        for controller, count in expected_counts.items():
-            assert controller.cleanup.call_count == count
+        for controller, expected_count in expected_counts.items():
+            # Check that the mock controller's cleanup method was called the correct number of times
+            assert controller.cleanup.call_count == expected_count
 

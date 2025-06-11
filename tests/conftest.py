@@ -18,29 +18,25 @@ def mock_hardware_manager():
     # 1. Create the main mock for the HardwareManager class
     hw_manager = MagicMock(spec=HardwareManager)
 
-    # 2. Create the distinct mock controller objects that the manager will provide.
-    def create_mock_pca(name):
-        """Helper to create a configured mock for a PCA controller."""
-        mock = MagicMock(name=name)
-        # Add the .set_pwm attribute that the test environment expects.
-        mock.set_pwm = MagicMock()
+    # 2. Define a simple class to use as a strict specification for our mock.
+    class MockPcaSpec:
+        def set_pwm(self, channel, on, off):
+            pass
 
-        # --- THE DEFINITIVE FIX ---
-        # Crucially, we now explicitly delete the .channels attribute.
-        # This prevents the mock from creating it on the fly when hasattr() is called,
-        # ensuring the correct code path is taken in HybridLEDController.
-        try:
-            del mock.channels
-        except AttributeError:
-            pass  # The attribute didn't exist, which is the desired state.
+        def cleanup(self):
+            pass
 
-        return mock
+    # 3. Create the mock controller objects using the strict spec.
+    mock_pca_40 = MagicMock(spec=MockPcaSpec, name="MockPCA_0x40")
+    mock_pca_41 = MagicMock(spec=MockPcaSpec, name="MockPCA_0x41")
 
-    mock_pca_40 = create_mock_pca("MockPCA_0x40")
-    mock_pca_41 = create_mock_pca("MockPCA_0x41")
+    # We still need the mocked methods to be MagicMocks themselves for assertions.
+    mock_pca_40.set_pwm = MagicMock()
+    mock_pca_40.cleanup = MagicMock()
+    mock_pca_41.set_pwm = MagicMock()
+    mock_pca_41.cleanup = MagicMock()
 
-    # 3. Configure the .get_controller() method on the mock manager.
-    #    Use a side_effect to return the correct mock based on the address.
+    # 4. Configure the .get_controller() method on the mock manager.
     hw_manager.get_controller.side_effect = lambda addr: {
         0x40: mock_pca_40,
         0x41: mock_pca_41
@@ -53,14 +49,15 @@ def mock_hardware_manager():
 def mock_matrix(mock_hardware_manager):
     """
     Provides a pre-configured, mocked LEDMatrix instance for tests.
-    This fixture now uses the new architecture, consuming a mock_hardware_manager.
+    This fixture now uses the new architecture, consuming a mock_hardware_manager
+    and including the required 'type' key in the config.
     """
     # This configuration defines a 2x2 matrix with controllers at 0x40 and 0x41
     config = [
-        {"row": 0, "col": 0, "controller_address": 0x40, "led_channel": 0},
-        {"row": 0, "col": 1, "controller_address": 0x40, "led_channel": 1},
-        {"row": 1, "col": 0, "controller_address": 0x41, "led_channel": 5},
-        {"row": 1, "col": 1, "controller_address": 0x41, "led_channel": 6},
+        {"row": 0, "col": 0, "type": "pca9685", "controller_address": 0x40, "led_channel": 0},
+        {"row": 0, "col": 1, "type": "pca9685", "controller_address": 0x40, "led_channel": 1},
+        {"row": 1, "col": 0, "type": "pca9685", "controller_address": 0x41, "led_channel": 5},
+        {"row": 1, "col": 1, "type": "pca9685", "controller_address": 0x41, "led_channel": 6},
     ]
 
     # Initialize LEDMatrix with the config and the MOCK hardware manager.

@@ -2,7 +2,8 @@
 import logging
 from typing import List, Dict, Optional, Tuple, Union
 
-# Import both controller types
+# Corrected relative imports: '..' goes up one level from the current
+# 'matrix' directory to the parent 'bongo' directory, then into 'controller'.
 from ..controller.hybrid_controller import HybridLEDController
 from ..controller.gpio_controller import GPIOLEDController
 
@@ -111,6 +112,29 @@ class LEDMatrix:
         """Turns all LEDs in the matrix off."""
         self.fill(0.0)
 
+    def set_frame(self, frame: List[List[float]]):
+        """
+        Updates the entire matrix based on a 2D list (frame) of brightness values.
+
+        Args:
+            frame: A 2D list of brightness values (int 0-255 or float 0.0-1.0).
+
+        Raises:
+            ValueError: If the frame dimensions do not match the matrix dimensions.
+        """
+        frame_rows = len(frame)
+        frame_cols = len(frame[0]) if frame_rows > 0 else 0
+
+        if frame_rows != self.rows or frame_cols != self.cols:
+            raise ValueError(
+                f"Frame dimensions ({frame_rows}x{frame_cols}) "
+                f"do not match matrix dimensions ({self.rows}x{self.cols})."
+            )
+
+        for r, row_data in enumerate(frame):
+            for c, brightness in enumerate(row_data):
+                self.set_pixel(r, c, brightness)
+
     def shutdown(self):
         """Turns all LEDs off and calls cleanup on controllers and the hardware manager."""
         log.info("Shutting down matrix...")
@@ -119,7 +143,8 @@ class LEDMatrix:
         for led in self.leds.values():
             led.cleanup()
         # Perform global cleanup (e.g., GPIO.cleanup())
-        self.hardware_manager.cleanup()
+        if hasattr(self.hardware_manager, 'cleanup'):
+            self.hardware_manager.cleanup()
 
     def __iter__(self):
         return iter(self.leds.values())
