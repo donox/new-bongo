@@ -5,96 +5,77 @@ from unittest.mock import MagicMock
 # Assuming these are the correct paths based on your project structure
 from src.bongo.controller.hybrid_controller import HybridLEDController
 from src.bongo.matrix.matrix import LEDMatrix
-
-
-# This test file assumes a conftest.py provides the fixtures.
-# The fixtures should correctly instantiate LEDMatrix with a mock pca9685_class.
-
-@pytest.fixture
-def mock_pca9685_class_with_instance():
-    """
-    Provides a MagicMock that simulates the PCA9685 class.
-    When this mock class is instantiated, it returns another mock (the instance mock).
-    Returns a tuple: (mock_class, mock_instance_returned_by_class)
-    """
-    mock_pca_instance = MagicMock(name="MockPCA9685_Instance")
-    mock_class_factory = MagicMock(name="MockPCA9685_ClassFactory", return_value=mock_pca_instance)
-    return mock_class_factory, mock_pca_instance
+from src.bongo.hardware_manager import HardwareManager
 
 
 @pytest.fixture
-def matrix_via_config(mock_pca9685_class_with_instance):
-    """Creates an LEDMatrix instance using a detailed 'config' list."""
-    pca_class_factory, _ = mock_pca9685_class_with_instance
+def mock_hardware_manager():
+    """
+    Creates a mock HardwareManager specifically for this test file.
+    """
+    hw_manager = MagicMock(spec=HardwareManager)
+    mock_pca_40 = MagicMock(name="MockPCA_0x40")
+    mock_pca_41 = MagicMock(name="MockPCA_0x41")
+    hw_manager.get_controller.side_effect = lambda addr: {
+        0x40: mock_pca_40,
+        0x41: mock_pca_41
+    }.get(addr)
+    return hw_manager
+
+
+@pytest.fixture
+def matrix_via_config(mock_hardware_manager):
+    """
+    Creates an LEDMatrix instance using a 'config' list and the
+    mock_hardware_manager, following the correct architecture.
+    """
+    # Note: Added "type" key to align with LEDMatrix constructor requirements
     test_config = [
-        {"row": 0, "col": 0, "controller_address": 0x40, "led_channel": 0},
-        {"row": 0, "col": 1, "controller_address": 0x40, "led_channel": 1, "bus_number": 2},
-        {"row": 1, "col": 0, "controller_address": 0x41, "led_channel": 5},
-        {"row": 1, "col": 1, "controller_address": 0x41, "led_channel": 6, "pwm_frequency": 100},
+        {"row": 0, "col": 0, "type": "pca9685", "controller_address": 0x40, "led_channel": 0},
+        {"row": 0, "col": 1, "type": "pca9685", "controller_address": 0x40, "led_channel": 1},
+        {"row": 1, "col": 0, "type": "pca9685", "controller_address": 0x41, "led_channel": 5},
     ]
-    matrix = LEDMatrix(config=test_config, default_pca9685_class=pca_class_factory)
-    return matrix
-
-
-@pytest.fixture
-def matrix_via_rows_cols(mock_pca9685_class_with_instance):
-    """Creates an LEDMatrix instance using 'rows', 'cols', and 'matrix_controller_config'."""
-    pca_class_factory, _ = mock_pca9685_class_with_instance
-    rows = 2
-    cols = 3
-    controller_details = {
-        "controller_address": 0x70,
-        "start_channel": 0,
-        "bus_number": 1,
-        "pwm_frequency": 240
-    }
-    matrix = LEDMatrix(rows=rows, cols=cols,
-                       matrix_controller_config=controller_details,
-                       default_pca9685_class=pca_class_factory)
+    # Corrected constructor call
+    matrix = LEDMatrix(test_config, mock_hardware_manager)
     return matrix
 
 
 class TestLEDMatrix:
-    """Unit tests for the LEDMatrix class."""
+    """Unit tests for the refactored LEDMatrix class."""
 
-    def test_matrix_initialization_with_config(self, matrix_via_config):
-        """Test matrix initialization using the 'config' parameter."""
+    def test_matrix_initialization_with_config(self, matrix_via_config, mock_hardware_manager):
+        """
+        Test matrix initialization using the 'config' and a hardware manager.
+        """
         matrix = matrix_via_config
 
         assert matrix is not None
-        assert matrix.rows == 2
-        assert matrix.cols == 2
-        assert len(matrix.leds) == 4
+        assert matrix.rows == 2  # max(0, 1) + 1
+        assert matrix.cols == 2  # max(0, 0) + 1 -> This will be max(col) + 1
+        assert len(matrix.leds) == 3
 
-        # Correctly access the dictionary using a (row, col) tuple key
-        led_at_0_0 = matrix.leds.get((0, 0))
-        assert led_at_0_0 is not None
+        # Verify the HardwareManager was used to get controllers
+        assert mock_hardware_manager.get_controller.call_count == 3
+
+        led_at_0_0 = matrix.get_led(0, 0)
         assert isinstance(led_at_0_0, HybridLEDController)
-
-        # Check properties of a specific created LED
-        led_at_0_1 = matrix.get_led(0, 1)
-        assert led_at_0_1.bus_number == 2  # This was overridden in the config
-
-    def test_matrix_initialization_with_rows_cols(self, matrix_via_rows_cols):
-        """Test matrix initialization using 'rows', 'cols'."""
-        matrix = matrix_via_rows_cols
-
-        assert matrix is not None
-        assert matrix.rows == 2
-        assert matrix.cols == 3
-        assert len(matrix.leds) == 6
-
-        led_at_1_2 = matrix.get_led(1, 2)
-        assert isinstance(led_at_1_2, HybridLEDController)
-        assert led_at_1_2.controller_address == 0x70
-        assert led_at_1_2.led_channel == 5  # Channels are sequential from 0
 
     def test_get_led(self, matrix_via_config):
         """Test the get_led method."""
-        led = matrix_via_config.get_led(1, 1)
+        led = matrix_via_config.get_led(1, 0)
         assert led is not None
-        assert led.controller_address == 0x41
-        assert led.led_channel == 6
+        assert led.led_channel == 5
 
-        assert matrix_via_config.get_led(9, 9) is None  # Out of bounds
+        assert matrix_via_config.get_led(9, 9) is None
 
+    def test_set_pixel_delegates_to_correct_controller(self, matrix_via_config):
+        """
+        Test that set_pixel correctly finds the logical LED and calls set_brightness.
+        """
+        led_1_0 = matrix_via_config.get_led(1, 0)
+        # Configure the mock on the specific controller for this test
+        led_1_0.controller.set_pwm = MagicMock()
+
+        matrix_via_config.set_pixel(1, 0, 0.5)
+
+        led_1_0.controller.set_pwm.assert_called_once()
