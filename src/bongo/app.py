@@ -22,7 +22,7 @@ from config.loader import ConfigLoader
 from bongo.utils.logger import setup_logging
 from bongo.operations.animation_manager import AnimationManager
 # Import a pattern to demonstrate running an animation
-from bongo.patterns.base_patterns import create_wave_pattern
+# from bongo.patterns.base_patterns import create_wave_pattern
 
 # --- Constants ---
 PRODUCTION_CONFIG_PATH = os.path.join(project_root, "config", "production_config.json")
@@ -92,10 +92,10 @@ def main():
     log.info("Loading startup 'wave' pattern...")
     # Get all coordinates of the configured LEDs to pass to the pattern
     all_led_coords = list(matrix.leds.keys())
-    wave_pattern = create_wave_pattern(all_led_coords, start_time_base=time.monotonic())
-    for coords, pixel_op in wave_pattern:
-        animation_manager.add_operation(coords[0], coords[1], pixel_op)
-    log.info("Startup pattern loaded into AnimationManager.")
+    # wave_pattern = create_wave_pattern(all_led_coords, start_time_base=time.monotonic())
+    # for coords, pixel_op in wave_pattern:
+    #     animation_manager.add_operation(coords[0], coords[1], pixel_op)
+    # log.info("Startup pattern loaded into AnimationManager.")
 
     # 6. Start the main application loop.
     log.info("Entering main loop... (Ctrl+C to exit)")

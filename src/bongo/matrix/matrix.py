@@ -58,12 +58,16 @@ class LEDMatrix:
         return value / 255.0 if value > 1.0 else value
 
     def get_led(self, row: int, col: int) -> Optional[AnyLEDController]:
-        return self.leds.get((row, col))
+        # print(f"Looking for key: ({row}, {col})")
+        # print(f"Available keys: {list(self.leds.keys())}")
+        result =  self.leds.get((row, col))
+        return result
 
     def set_pixel(self, row: int, col: int, brightness: float):
-        led = self.get_led(row, col)
+        led = self.get_led(row, col-1)
         if led:
-            led.set_brightness(self._normalize_brightness(brightness))
+            brt = self._normalize_brightness(brightness)
+            led.set_brightness(brt)
 
     def fill(self, brightness: float):
         normalized_brightness = self._normalize_brightness(brightness)

@@ -20,10 +20,116 @@
       "row": 0,
       "col": 2,
       "type": "pca9685",
+      "pin": 0,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 3,
+      "type": "pca9685",
       "pin": 1,
       "address": 64
+    },
+        {
+      "row": 0,
+      "col": 4,
+      "type": "pca9685",
+      "pin": 2,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 5,
+      "type": "pca9685",
+      "pin": 3,
+      "address": 64
     }
-  ]
+    ,
+        {
+      "row": 0,
+      "col": 6,
+      "type": "pca9685",
+      "pin": 4,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 7,
+      "type": "pca9685",
+      "pin": 5,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 8,
+      "type": "pca9685",
+      "pin": 6,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 9,
+      "type": "pca9685",
+      "pin": 7,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 10,
+      "type": "pca9685",
+      "pin": 8,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 11,
+      "type": "pca9685",
+      "pin": 9,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 12,
+      "type": "pca9685",
+      "pin": 10,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 13,
+      "type": "pca9685",
+      "pin": 11,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 14,
+      "type": "pca9685",
+      "pin": 12,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 15,
+      "type": "pca9685",
+      "pin": 13,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 16,
+      "type": "pca9685",
+      "pin": 14,
+      "address": 64
+    },
+        {
+      "row": 0,
+      "col": 17,
+      "type": "pca9685",
+      "pin": 15,
+      "address": 64
+    }
+  ],
+  "dummyNote": "Note: For a path like /var/log/bongo/, you may need to create the directory and set permissions first (sudo mkdir /var/log/bongo && sudo chown bongo:bongo /var/log/bongo). A simpler default for testing might be 'filepath': 'bongo.log', which will save it in the project root.",
+  "dummyNote2": "Pins on pca9685 number 0-15"
 }
-
-Note: For a path like /var/log/bongo/, you may need to create the directory and set permissions first (sudo mkdir /var/log/bongo && sudo chown bongo:bongo /var/log/bongo). A simpler default for testing might be "filepath": "bongo.log", which will save it in the project root.

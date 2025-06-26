@@ -1,0 +1,8 @@
+rsync -av --delete src tests config bongo@192.168.1.120:~/BongoNew/
+
+ssh -Y bongo@192.168.1.120
+
+bongo@bongo:~/BongoNew/tests $     python -m run_all_tests
+
+clear
+

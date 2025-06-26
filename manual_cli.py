@@ -70,6 +70,7 @@ def main():
     try:
         while True:
             command_str = input("> ").strip().lower()
+            # command_str = "set 0 5 255"
             parts = command_str.split()
             if not parts: continue
             cmd = parts[0]

@@ -29,7 +29,7 @@ class HardwareManager:
     Manages and provides access to all hardware resources, such as the I2C bus,
     PCA9685 controllers, and GPIO pins.
     """
-    def __init__(self, pca_addresses: List[int], gpio_pins: List[int]):
+    def __init__(self, addresses: List[int], gpio_pins: List[int]=None):
         """
         Initializes all required hardware.
 
@@ -46,13 +46,18 @@ class HardwareManager:
             return
 
         # --- Setup I2C and PCA9685 Controllers ---
-        if pca_addresses:
+        if addresses:
             try:
                 log.info("Initializing I2C bus for PCA9685 controllers...")
                 self.i2c_bus = busio.I2C(board.SCL, board.SDA)
-                for addr in pca_addresses:
+                for addr in addresses:
                     log.debug(f"Initializing PCA9685 at address {hex(addr)}...")
                     self.controllers[addr] = PCA9685(self.i2c_bus, address=addr)
+                    pca = self.controllers[addr]            # start insert
+                    pca.frequency = 60
+                    # Class init for PCA9685 does reset, but that doesn't clear existing lights
+                    for i in range(16):
+                        pca.channels[i].duty_cycle = 0
                 log.info("PCA9685 controllers initialized.")
             except Exception as e:
                 log.critical(f"Failed to initialize I2C hardware: {e}", exc_info=True)
