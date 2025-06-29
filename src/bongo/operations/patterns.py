@@ -4,7 +4,8 @@ import time
 import random
 from typing import Generator, Tuple, List
 
-from bongo.operations.led_operation import LEDOperation, BRIGHTNESS_MAX, BRIGHTNESS_MIN
+from bongo.operations.led_operation import LEDOperation
+from bongo.utils.constants import BRIGHTNESS_MAX, BRIGHTNESS_MIN
 
 def create_wave_pattern(led_coords: List[Tuple[int, int]], start_time_base: float = 0) -> Generator[
     Tuple[Tuple[int, int], LEDOperation], None, None]:
@@ -38,6 +39,15 @@ def create_wave_pattern(led_coords: List[Tuple[int, int]], start_time_base: floa
         )
         yield (coords, operation)
 
+    # def __init__(self, channel: int, on_value: int, off_value: int):
+    #     """
+    #     Initializes a direct hardware operation.
+    #
+    #     Args:
+    #         channel: The specific hardware channel (0-15 for PCA9685).
+    #         on_value: The PWM tick (0-4095) to turn the signal on.
+    #         off_value: The PWM tick (0-4095) to turn the signal off.
+    #     """
 
 def create_random_flash_pattern(led_coords: List[Tuple[int, int]], num_flashes: int, start_time_base: float = 0) -> Generator[
     Tuple[Tuple[int, int], LEDOperation], None, None]:

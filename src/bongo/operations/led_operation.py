@@ -42,7 +42,7 @@ class LEDPixelOperation:
             hold_duration: float,  # Seconds
             fade_duration: float,  # Seconds
             start_time: Optional[float] = None,  # Monotonic time when the operation should begin
-            initial_brightness: float = 0.0  # Brightness at the very start of the operation
+            initial_brightness: float = 0.5  # Brightness at the very start of the operation
     ):
         """
         Initializes an LEDPixelOperation.

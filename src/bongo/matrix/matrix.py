@@ -64,7 +64,7 @@ class LEDMatrix:
         return result
 
     def set_pixel(self, row: int, col: int, brightness: float):
-        led = self.get_led(row, col-1)
+        led = self.get_led(row, col)
         if led:
             brt = self._normalize_brightness(brightness)
             led.set_brightness(brt)

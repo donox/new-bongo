@@ -46,85 +46,85 @@
     }
     ,
         {
-      "row": 0,
-      "col": 6,
+      "row": 1,
+      "col": 0,
       "type": "pca9685",
       "pin": 4,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 7,
+      "row": 1,
+      "col": 1,
       "type": "pca9685",
       "pin": 5,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 8,
+      "row": 1,
+      "col": 2,
       "type": "pca9685",
       "pin": 6,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 9,
+      "row": 1,
+      "col": 3,
       "type": "pca9685",
       "pin": 7,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 10,
+      "row": 1,
+      "col": 4,
       "type": "pca9685",
       "pin": 8,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 11,
+      "row": 1,
+      "col": 5,
       "type": "pca9685",
       "pin": 9,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 12,
+      "row": 2,
+      "col": 0,
       "type": "pca9685",
       "pin": 10,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 13,
+      "row": 2,
+      "col": 1,
       "type": "pca9685",
       "pin": 11,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 14,
+      "row": 2,
+      "col": 2,
       "type": "pca9685",
       "pin": 12,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 15,
+      "row": 2,
+      "col": 3,
       "type": "pca9685",
       "pin": 13,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 16,
+      "row": 2,
+      "col": 4,
       "type": "pca9685",
       "pin": 14,
       "address": 64
     },
         {
-      "row": 0,
-      "col": 17,
+      "row": 2,
+      "col": 5,
       "type": "pca9685",
       "pin": 15,
       "address": 64

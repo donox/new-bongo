@@ -38,7 +38,7 @@ class HybridLEDController:
         try:
             if IS_REAL_HARDWARE and isinstance(self.controller, PCA9685):
                 duty_cycle = self._calculate_duty_cycle(self.current_brightness)
-                print(f"set_brightness with channel: {self.led_channel} controller: {self.controller}")
+                # print(f"set_brightness with channel: {self.led_channel} controller: {self.controller}")
                 self.controller.channels[self.led_channel].duty_cycle = duty_cycle
             elif isinstance(self.controller, MagicMock):
                 pwm_val = int(self.current_brightness * 4095)

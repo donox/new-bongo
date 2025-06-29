@@ -55,6 +55,9 @@ class _ManagedOperation:
         # 3. Set the brightness on the hardware controller
         if led:
             led.set_brightness(brightness)
+            # print(f"DEBUG: Set LED ({self.row},{self.col}) brightness to {brightness:.3f}")   # !!!!!!!!!!
+        else:
+            print(f"ERROR: No LED found at ({self.row},{self.col})")                        # !!!!!!!!!!
 
         # 4. Return whether the operation is completed
         return self.pixel_op.is_completed(time_now)
